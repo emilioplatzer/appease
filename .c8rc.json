@@ -1,0 +1,11 @@
+{
+  "all": true,
+  "include": ["dist/src/**/*.js", "dist/bin/**/*.js"],
+  "exclude": ["dist/test/**", "dist/src/types.js", "**/*.d.ts"],
+  "reporter": ["text", "lcov"],
+  "check-coverage": true,
+  "branches": 100,
+  "lines": 100,
+  "functions": 100,
+  "statements": 100
+}
