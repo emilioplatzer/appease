@@ -1,12 +1,6 @@
 // Strongly-typed contracts for appease (brand: "normalificador").
 // No `any`. Every type here is shared between the pure core and the orchestration (CLI).
 
-/** End-of-line style detected in (or required for) a file. `none` = no line breaks at all. */
-export type Eol = "lf" | "crlf" | "mixed" | "none";
-
-/** Indentation convention detected in a file. */
-export type IndentStyle = "tabs" | "spaces" | "mixed" | "none";
-
 /** Final-newline state of a file. */
 export type FinalNewline = "present" | "missing" | "multiple";
 
@@ -19,15 +13,17 @@ export interface FormatReport {
   /** File has no content at all. */
   empty: boolean;
   /** UTF-8 BOM present at the start of the content. */
-  bom: boolean;
-  /** EOL style across the whole file. */
-  eol: Eol;
-  /** Trailing whitespace, with the (1-based) line numbers affected. */
-  trailing: { present: boolean; lines: number[] };
+  hasBom: boolean;
+  /** At least one CRLF line ending. */
+  hasCrlf: boolean;
+  /** At least one lone-LF line ending (LF not preceded by CR). Mixed EOL = hasCrlf && hasLf. */
+  hasLf: boolean;
+  /** At least one line with trailing whitespace. */
+  hasTrailingSpaces: boolean;
   /** Final-newline state. */
   finalNewline: FinalNewline;
-  /** Indentation convention plus the detected indent size (null when undetectable). */
-  indent: { style: IndentStyle; size: number | null };
+  // Indentation detection is deferred to the future `--tabs-*` work (convention-only,
+  // not rewritten by `--fix-format`).
 }
 
 // ---------------------------------------------------------------------------
@@ -44,20 +40,6 @@ export interface NormalizeOptions {
   trailing: "trim" | "keep";
   /** Ensure exactly one final newline, or leave as-is. */
   finalNewline: "ensure" | "keep";
-}
-
-/** What the normalizer changed (so nothing fails silently). */
-export interface NormalizeReport {
-  changed: boolean;
-  bom: "added" | "removed" | "unchanged";
-  eol: "converted" | "unchanged";
-  trailing: "trimmed" | "unchanged";
-  finalNewline: "added" | "removed-extra" | "unchanged";
-}
-
-export interface NormalizeResult {
-  content: string;
-  report: NormalizeReport;
 }
 
 // ---------------------------------------------------------------------------
@@ -91,7 +73,7 @@ export interface ProjectConfig {
 // ---------------------------------------------------------------------------
 
 /** Axis along which a file deviates from its resolved config. */
-export type DeviationAxis = "bom" | "eol" | "trailing" | "finalNewline" | "indent";
+export type DeviationAxis = "bom" | "eol" | "trailing" | "finalNewline";
 
 /** A single file's deviations against the resolved config. */
 export interface FileAudit {
