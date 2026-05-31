@@ -14,10 +14,13 @@ export interface FormatReport {
   empty: boolean;
   /** UTF-8 BOM present at the start of the content. */
   hasBom: boolean;
+  // EOL is reported as three independent facts; "mixed" is two or more of them true.
   /** At least one CRLF line ending. */
   hasCrlf: boolean;
-  /** At least one lone-LF line ending (LF not preceded by CR). Mixed EOL = hasCrlf && hasLf. */
+  /** At least one lone-LF line ending (LF not preceded by CR). */
   hasLf: boolean;
+  /** At least one lone-CR line ending (CR not followed by LF; classic pre-OSX Mac). */
+  hasCr: boolean;
   /** At least one line with trailing whitespace. */
   hasTrailingSpaces: boolean;
   /** Final-newline state. */

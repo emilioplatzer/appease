@@ -1,7 +1,7 @@
 // Code-generated fixtures: build file contents with controlled low-level format,
 // so tests assert exactly the bytes/format they exercise (CRLF/LF/BOM/trailing/...).
 
-export const BOM = "﻿";
+export const BOM = "\ufeffh";
 
 /** Join `lines` with the given EOL. Does not add a trailing newline. */
 export function withEol(lines: string[], eol: "lf" | "crlf"): string {

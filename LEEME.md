@@ -170,8 +170,7 @@ tabs se corrigen a mano.
    desviación**. Ese diff es el reporte de verdad.
 2. Revisar esas excepciones: dejar las que eran a propósito, **borrar** a mano las que eran
    porquería (si está casi todo mal, borrar todo el bloque).
-3. `--fix-format` → normaliza todo lo que ya no quede protegido por una excepción. (El EOL lo
-   aplica Git con `git add --renormalize .`; el resto lo aplica el normalificador.)
+3. `--fix-format` → normaliza todo lo que ya no quede protegido por una excepción. 
 
 Como Git revierte cualquier cosa, los pasos destructivos son seguros de probar.
 
