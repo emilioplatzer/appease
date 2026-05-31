@@ -1,0 +1,9 @@
+{
+  "name": "appease",
+  "version": "0.0.1",
+  "description": "Make pease in this app.",
+  "license": "MIT",
+  "author": "Emilio Platzer",
+  "scripts": {
+  }
+}
