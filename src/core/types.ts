@@ -63,6 +63,13 @@ export interface ResolvedFileConfig {
   eol: "lf" | "crlf" | "auto" | "binary";
 }
 
+/** Raw, unparsed contents of the three config sources. `null` = file absent (vs `""` = present but empty). */
+export interface RawConfigs {
+  editorconfig: string | null;
+  gitattributes: string | null;
+  vscodeSettings: string | null;
+}
+
 /** Parsed, not-yet-resolved project configuration. */
 export interface ProjectConfig {
   /** Whether each config source was found on disk. */

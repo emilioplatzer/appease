@@ -1,7 +1,7 @@
 {
   "all": true,
-  "include": ["test-run/src/**/*.js"],
-  "exclude": ["test-run/test/**", "test-run/src/core/types.js", "**/*.d.ts"],
+  "include": ["test-run/src/core/**/*.js"],
+  "exclude": ["test-run/src/core/types.js", "**/*.d.ts"],
   "reporter": ["text", "lcov"],
   "check-coverage": true,
   "branches": 100,

@@ -5,7 +5,8 @@ import type { RunOptions, RunReport } from "./core/types.js";
 export * from "./core/types.js";
 export { analyzeContent } from "./core/analyze.js";
 export { normalizeText } from "./core/normalize.js";
-export { readConfigs, defaultEditorconfig, defaultGitattributes, writeEditorconfig, writeGitattributes } from "./core/configs.js";
+export { interpretConfigs, defaultEditorconfig, defaultGitattributes } from "./core/configs.js";
+export { readRawConfigs, writeEditorconfig, writeGitattributes } from "./io/configs.js";
 export { audit, deviationsToExceptions } from "./core/audit.js";
 
 /**

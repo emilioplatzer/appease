@@ -1,18 +1,19 @@
-import type { ExceptionEntry, ProjectConfig } from "./types.js";
+import type { ProjectConfig, RawConfigs } from "./types.js";
 
 /**
- * Read and parse the project's config sources (.editorconfig, .gitattributes,
- * .vscode/settings.json) from `cwd`, returning a resolver for per-file options.
+ * Interpret the raw contents of the three config sources into a resolver for
+ * per-file options. Pure: takes the already-read contents, touches no disk.
  *
  * Each axis is owned by exactly one source (see LEEME.md): EOL -> .gitattributes,
  * BOM/charset/trailing/final-newline/indent -> .editorconfig, renderWhitespace
- * -> .vscode/settings.json.
+ * -> .vscode/settings.json. Only `.editorconfig` and `.gitattributes` drive
+ * `resolve`; `.vscode/settings.json` only counts towards `present`.
  */
-export async function readConfigs(cwd: string): Promise<ProjectConfig> {
-  void cwd; // scaffold: parameter wired but unused until implemented
-  // TODO(scaffold): parse .editorconfig (sections by glob), .gitattributes
-  // (text / eol / -text rules) and .vscode/settings.json.
-  throw new Error("readConfigs: not implemented");
+export function interpretConfigs(raw: RawConfigs): ProjectConfig {
+  void raw; // scaffold: parameter wired but unused until implemented
+  // TODO(scaffold): parse .editorconfig (sections by glob) and .gitattributes
+  // (text / eol / -text rules); build the per-path resolver.
+  throw new Error("interpretConfigs: not implemented");
 }
 
 /** Pure, idempotent defaults for `.editorconfig` (no inspection of the repo's reality). */
@@ -25,25 +26,4 @@ export function defaultEditorconfig(): string {
 export function defaultGitattributes(): string {
   // TODO(scaffold): render the canonical default .gitattributes.
   throw new Error("defaultGitattributes: not implemented");
-}
-
-/**
- * Create or update `.editorconfig`, merging the given exceptions in a readable,
- * idempotent way while preserving existing comments and a sensible order.
- */
-export async function writeEditorconfig(cwd: string, exceptions: ExceptionEntry[], dryRun: boolean): Promise<{ created: boolean; modified: boolean }> {
-  void cwd; // scaffold: parameters wired but unused until implemented
-  void exceptions;
-  void dryRun;
-  // TODO(scaffold): implement readable, comment-preserving, idempotent writes.
-  throw new Error("writeEditorconfig: not implemented");
-}
-
-/** Create or update `.gitattributes` for EOL exceptions, idempotently. */
-export async function writeGitattributes(cwd: string, exceptions: ExceptionEntry[], dryRun: boolean): Promise<{ created: boolean; modified: boolean }> {
-  void cwd; // scaffold: parameters wired but unused until implemented
-  void exceptions;
-  void dryRun;
-  // TODO(scaffold): implement readable, comment-preserving, idempotent writes.
-  throw new Error("writeGitattributes: not implemented");
 }
