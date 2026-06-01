@@ -41,12 +41,28 @@ function resolveFile(editorconfig: Editorconfig, gitattributes: Gitattributes, p
 
 /** Pure, idempotent defaults for `.editorconfig` (no inspection of the repo's reality). */
 export function defaultEditorconfig(): string {
-  // TODO(scaffold): render the canonical default .editorconfig (see LEEME.md).
-  throw new Error("defaultEditorconfig: not implemented");
+  return [
+    "root = true",
+    "",
+    "# Defaults for every file",
+    "[*]",
+    "charset = utf-8",
+    "trim_trailing_whitespace = true",
+    "insert_final_newline = true",
+    "indent_style = space",
+    "",
+    "# Markdown: two trailing spaces are an intentional line break",
+    "[*.md]",
+    "trim_trailing_whitespace = false",
+    "",
+  ].join("\n");
 }
 
 /** Pure, idempotent defaults for `.gitattributes` (`* text=auto`, ...). */
 export function defaultGitattributes(): string {
-  // TODO(scaffold): render the canonical default .gitattributes.
-  throw new Error("defaultGitattributes: not implemented");
+  return [
+    "# Normalize to LF in the repo on commit; check out with the OS-native EOL.",
+    "* text=auto",
+    "",
+  ].join("\n");
 }
