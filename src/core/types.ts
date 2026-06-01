@@ -49,18 +49,19 @@ export interface NormalizeOptions {
 // Project configuration (resolved from .editorconfig / .gitattributes / .vscode).
 // ---------------------------------------------------------------------------
 
-/** Charset policy as expressed by `.editorconfig`. */
-export type Charset = "utf-8" | "utf-8-bom" | "unset";
-
-/** Options resolved for a single file from the project config. */
+/**
+ * Options resolved for a single file from the project config. Aligned with the
+ * normalizer's actions, so `--fix-format` can drive `normalizeText` directly.
+ */
 export interface ResolvedFileConfig {
-  charset: Charset;
-  trimTrailingWhitespace: boolean;
-  insertFinalNewline: boolean;
-  indentStyle: "space" | "tab" | "unset";
-  indentSize: number;
-  /** EOL handling as declared by Git for this path (or `auto` for the `text=auto` default). */
+  /** From `.editorconfig` charset: `utf-8-bom`->add, `utf-8`->remove, unset/keep->keep. */
+  bom: "add" | "remove" | "keep";
+  /** From `.gitattributes` (or `auto` for the `text=auto` default; `binary` = not normalized). */
   eol: "lf" | "crlf" | "auto" | "binary";
+  trailing: "trim" | "keep";
+  finalNewline: "ensure" | "keep";
+  /** Axes governed by an unrecognized config value (case 2): skip + report, never normalize. */
+  unresolved: DeviationAxis[];
 }
 
 /** Raw, unparsed contents of the three config sources. `null` = file absent (vs `""` = present but empty). */
