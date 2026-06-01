@@ -1,24 +1,65 @@
-import type { AuditResult, ExceptionEntry, FormatReport, ProjectConfig } from "./types.js";
+import type { DeviationAxis, ExceptionEntry, FileAudit, FormatReport, ProjectConfig, ResolvedFileConfig } from "./types.js";
 
 /**
  * Evaluate a collection of per-file analyses against the resolved project
- * config, producing the list of deviations per axis and per file.
+ * config. Pure. Returns one `FileAudit` per file that has any finding
+ * (deviation or unresolved axis); clean files are omitted.
+ *
+ * `nativeEol` is this machine's native line ending (CRLF on Windows, LF
+ * elsewhere); it is how `eol=auto` is evaluated, since under `text=auto` the
+ * working copy is expected to be native. The pure core receives it as input.
  */
-export function audit(reports: { path: string; report: FormatReport }[], config: ProjectConfig): AuditResult {
-  void reports; // scaffold: parameters wired but unused until implemented
-  void config;
-  // TODO(scaffold): compare each FormatReport against config.resolve(path).
-  throw new Error("audit: not implemented");
+export function audit(
+  reports: { path: string; report: FormatReport }[],
+  config: ProjectConfig,
+  nativeEol: "lf" | "crlf",
+): FileAudit[] {
+  const files: FileAudit[] = [];
+  for (const { path, report } of reports) {
+    const cfg = config.resolve(path);
+    const deviations = fileDeviations(report, cfg, nativeEol);
+    if (deviations.length > 0 || cfg.unresolved.length > 0) files.push({ path, deviations, unresolved: cfg.unresolved });
+  }
+  return files;
+}
+
+/** Axes where `report` differs from `cfg`, skipping axes the config could not resolve (case 2). */
+function fileDeviations(report: FormatReport, cfg: ResolvedFileConfig, nativeEol: "lf" | "crlf"): DeviationAxis[] {
+  const deviations: DeviationAxis[] = [];
+  const governs = (axis: DeviationAxis): boolean => !cfg.unresolved.includes(axis);
+
+  if (governs("bom")) {
+    if (cfg.bom === "add" && !report.hasBom) deviations.push("bom");
+    else if (cfg.bom === "remove" && report.hasBom) deviations.push("bom");
+  }
+  if (governs("trailing") && cfg.trailing === "trim" && report.hasTrailingSpaces) {
+    deviations.push("trailing");
+  }
+  if (governs("finalNewline") && cfg.finalNewline === "ensure" && report.finalNewline !== "present") {
+    deviations.push("finalNewline");
+  }
+  if (governs("eol")) {
+    const target = cfg.eol === "auto" ? nativeEol : cfg.eol;
+    if (target === "lf" && (report.hasCrlf || report.hasCr)) deviations.push("eol");
+    else if (target === "crlf" && (report.hasLf || report.hasCr)) deviations.push("eol");
+    // "binary" -> EOL is not evaluated
+  }
+  return deviations;
 }
 
 /**
- * Turn an audit result into the explicit exceptions that `--adapt-configs`
+ * Turn audited deviations into the explicit exceptions that `--adapt-configs`
  * writes, so that a subsequent `--fix-format` changes nothing (the safety
- * invariant): one exception per deviation, multi-axis when needed, routed to
- * the config file that owns each axis.
+ * invariant). Each file's deviations are routed to the config file that owns
+ * each axis: EOL -> `.gitattributes`, everything else -> `.editorconfig`.
  */
-export function deviationsToExceptions(result: AuditResult): ExceptionEntry[] {
-  void result; // scaffold: parameter wired but unused until implemented
-  // TODO(scaffold): map deviations to ExceptionEntry[] (owner per axis).
-  throw new Error("exceptionsFromAudit: not implemented");
+export function deviationsToExceptions(files: FileAudit[]): ExceptionEntry[] {
+  const exceptions: ExceptionEntry[] = [];
+  for (const file of files) {
+    const editorconfigAxes = file.deviations.filter((axis) => axis !== "eol");
+    const gitattributesAxes = file.deviations.filter((axis) => axis === "eol");
+    if (editorconfigAxes.length > 0) exceptions.push({ owner: "editorconfig", pattern: file.path, axes: editorconfigAxes });
+    if (gitattributesAxes.length > 0) exceptions.push({ owner: "gitattributes", pattern: file.path, axes: gitattributesAxes });
+  }
+  return exceptions;
 }

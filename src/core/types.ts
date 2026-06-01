@@ -86,10 +86,13 @@ export interface ProjectConfig {
 /** Axis along which a file deviates from its resolved config. */
 export type DeviationAxis = "bom" | "eol" | "trailing" | "finalNewline";
 
-/** A single file's deviations against the resolved config. */
+/** A single file's findings against the resolved config (only files with findings are listed). */
 export interface FileAudit {
   path: string;
+  /** Axes where the file differs from what the config asks for. */
   deviations: DeviationAxis[];
+  /** Axes governed by an unrecognized config value (case 2): not evaluated, reported as-is. */
+  unresolved: DeviationAxis[];
 }
 
 /** Full audit result. `--audit` prints this as canonical JSON. */
