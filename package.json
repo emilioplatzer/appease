@@ -28,9 +28,13 @@
     "coverage": "c8 mocha",
     "prepublishOnly": "npm run build"
   },
+  "dependencies": {
+    "picomatch": "^4.0.4"
+  },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "^25.9.1",
+    "@types/picomatch": "^4.0.3",
     "c8": "^11.0.0",
     "mocha": "^11.7.6",
     "typescript": "^6.0.3"
