@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { analyzeContent } from "../src/analyze.js";
+import { analyzeContent } from "../src/core/analyze.js";
 import { BOM, withEol, withBom, addTrailingSpaces, withFinalNewline } from "./helpers/fixtures.js";
 
 describe("analyzeContent", () => {

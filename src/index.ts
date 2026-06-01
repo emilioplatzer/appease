@@ -1,12 +1,12 @@
 // Public API for appease. Consumable from Node and exercised by the CLI and tests.
 
-import type { RunOptions, RunReport } from "./types.js";
+import type { RunOptions, RunReport } from "./core/types.js";
 
-export * from "./types.js";
-export { analyzeContent } from "./analyze.js";
-export { normalizeText } from "./normalize.js";
-export { readConfigs, defaultEditorconfig, defaultGitattributes, writeEditorconfig, writeGitattributes } from "./configs.js";
-export { audit, deviationsToExceptions } from "./audit.js";
+export * from "./core/types.js";
+export { analyzeContent } from "./core/analyze.js";
+export { normalizeText } from "./core/normalize.js";
+export { readConfigs, defaultEditorconfig, defaultGitattributes, writeEditorconfig, writeGitattributes } from "./core/configs.js";
+export { audit, deviationsToExceptions } from "./core/audit.js";
 
 /**
  * Run a full appease operation according to `options.mode`:

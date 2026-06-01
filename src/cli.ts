@@ -2,8 +2,8 @@
 // CLI entry point. Maps switches to the public API and orchestrates the effects.
 
 import { fileURLToPath } from "node:url";
-import { runAppease } from "../src/index.js";
-import type { RunOptions } from "../src/types.js";
+import { runAppease } from "./index.js";
+import type { RunOptions } from "./core/types.js";
 
 /** Parse argv into resolved RunOptions, or throw on invalid input (never fail silently). */
 export function parseArgs(argv: string[]): RunOptions {
