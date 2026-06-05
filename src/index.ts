@@ -1,6 +1,11 @@
 // Public API for appease. Consumable from Node and exercised by the CLI and tests.
 
-import type { RunOptions, RunReport } from "./core/types.js";
+import { analyzeContent } from "./core/analyze.js";
+import { audit } from "./core/audit.js";
+import { interpretConfigs } from "./core/configs.js";
+import type { AuditResult, FormatReport, RunOptions, RunReport } from "./core/types.js";
+import { readRawConfigs } from "./io/configs.js";
+import { listTrackedFiles, readForAudit } from "./io/files.js";
 
 export * from "./core/types.js";
 export { analyzeContent } from "./core/analyze.js";
@@ -19,8 +24,19 @@ export { audit, deviationsToExceptions } from "./core/audit.js";
  * Orchestrates the effects (git ls-files, file I/O) around the pure core.
  */
 export async function runAppease(options: RunOptions): Promise<RunReport> {
-  void options; // scaffold: parameter wired but unused until implemented
-  // TODO(scaffold): discover files (git ls-files), skip binaries / -text,
-  // resolve per-file config, dispatch by mode, collect created/modified.
-  throw new Error("runAppease: not implemented");
+  if (options.mode === "audit") return runAudit(options);
+  throw new Error(`mode not implemented yet: ${options.mode}`);
+}
+
+async function runAudit(options: RunOptions): Promise<RunReport> {
+  const config = interpretConfigs(await readRawConfigs(options.cwd));
+  const reports: { path: string; report: FormatReport }[] = [];
+  const skipped: AuditResult["skipped"] = [];
+  for (const path of await listTrackedFiles(options.cwd)) {
+    const read = await readForAudit(options.cwd, path, config.resolve(path).eol === "binary");
+    if ("skip" in read) skipped.push({ path, reason: read.skip });
+    else reports.push({ path, report: analyzeContent(read.content) });
+  }
+  const nativeEol = process.platform === "win32" ? "crlf" : "lf";
+  return { mode: "audit", dryRun: options.dryRun, created: [], modified: [], audit: { files: audit(reports, config, nativeEol), skipped } };
 }

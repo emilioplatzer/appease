@@ -1,26 +1,50 @@
 #!/usr/bin/env node
 // CLI entry point. Maps switches to the public API and orchestrates the effects.
 
+import { parseArgs as nodeParseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
 import { runAppease } from "./index.js";
-import type { RunOptions } from "./core/types.js";
+import type { RunMode, RunOptions } from "./core/types.js";
+
+const MODES: RunMode[] = ["audit", "add-config-defaults", "adapt-configs", "fix-format"];
 
 /** Parse argv into resolved RunOptions, or throw on invalid input (never fail silently). */
 export function parseArgs(argv: string[]): RunOptions {
-  void argv; // scaffold: parameter wired but unused until implemented
-  // TODO(scaffold): use node:util parseArgs. Switches:
-  //   --audit | --add-config-defaults | --adapt-configs | --fix-format (exactly one mode)
-  //   --apply-eol --yes --dry-run --verbose
-  throw new Error("parseArgs: not implemented");
+  const { values } = nodeParseArgs({
+    args: argv,
+    strict: true,
+    allowPositionals: false,
+    options: {
+      audit: { type: "boolean" },
+      "add-config-defaults": { type: "boolean" },
+      "adapt-configs": { type: "boolean" },
+      "fix-format": { type: "boolean" },
+      "apply-eol": { type: "boolean" },
+      yes: { type: "boolean" },
+      "dry-run": { type: "boolean" },
+      verbose: { type: "boolean" },
+    },
+  });
+  const modes = MODES.filter((mode) => values[mode] === true);
+  if (modes.length !== 1) {
+    throw new Error("Specify exactly one mode: --audit | --add-config-defaults | --adapt-configs | --fix-format");
+  }
+  return {
+    mode: modes[0],
+    cwd: process.cwd(),
+    dryRun: values["dry-run"] ?? false,
+    yes: values.yes ?? false,
+    verbose: values.verbose ?? false,
+    applyEol: values["apply-eol"] ?? false,
+  };
 }
 
 export async function main(argv: string[]): Promise<number> {
-  // TODO(scaffold): parse, run, print the summary of created/modified files
-  // (and the canonical JSON AuditResult for --audit). Return a process exit code.
-  const options = parseArgs(argv);
-  const report = await runAppease(options);
-  void report;
-  throw new Error("main: not implemented");
+  const report = await runAppease(parseArgs(argv));
+  if (report.audit !== undefined) process.stdout.write(`${JSON.stringify(report.audit, null, 2)}\n`);
+  for (const path of report.created) process.stdout.write(`created: ${path}\n`);
+  for (const path of report.modified) process.stdout.write(`modified: ${path}\n`);
+  return 0;
 }
 
 // Only run when invoked directly (not when imported by tests).
