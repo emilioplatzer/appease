@@ -46,6 +46,7 @@ export async function main(argv: string[]): Promise<number> {
   if (report.audit !== undefined) process.stdout.write(`${JSON.stringify(report.audit, null, 2)}\n`);
   for (const path of report.created) process.stdout.write(`${report.dryRun ? "would create" : "created"}: ${path}\n`);
   for (const path of report.modified) process.stdout.write(`${report.dryRun ? "would modify" : "modified"}: ${path}\n`);
+  for (const path of report.unchanged) process.stdout.write(`unchanged: ${path}\n`);
   return 0;
 }
 

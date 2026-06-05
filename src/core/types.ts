@@ -140,6 +140,8 @@ export interface RunReport {
   dryRun: boolean;
   created: string[];
   modified: string[];
+  /** Files considered but left untouched (e.g. a config that already existed). */
+  unchanged: string[];
   /** Present for `--audit`. */
   audit?: AuditResult;
 }

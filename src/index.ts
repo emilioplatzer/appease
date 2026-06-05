@@ -3,6 +3,7 @@
 import { analyzeContent } from "./core/analyze.js";
 import { audit } from "./core/audit.js";
 import { defaultEditorconfig, defaultGitattributes, interpretConfigs } from "./core/configs.js";
+import { normalizeText } from "./core/normalize.js";
 import type { AuditResult, FormatReport, RunOptions, RunReport } from "./core/types.js";
 import { readRawConfigs, writeEditorconfig, writeGitattributes } from "./io/configs.js";
 import { listTrackedFiles, readForAudit } from "./io/files.js";
@@ -29,13 +30,26 @@ export async function runAppease(options: RunOptions): Promise<RunReport> {
   throw new Error(`mode not implemented yet: ${options.mode}`);
 }
 
+/** This machine's native line ending — how `text=auto` resolves in the working tree. */
+function nativeEol(): "lf" | "crlf" {
+  return process.platform === "win32" ? "crlf" : "lf";
+}
+
+/** Re-end a generated (canonical LF) config in the OS-native EOL, so the written file is native. */
+function toNativeEol(content: string): string {
+  return normalizeText(content, { bom: "keep", eol: nativeEol(), trailing: "keep", finalNewline: "keep" });
+}
+
 /** Write the pure-default configs, creating only the ones that do not exist yet (never overwrites). */
 async function runAddConfigDefaults(options: RunOptions): Promise<RunReport> {
   const raw = await readRawConfigs(options.cwd);
   const created: string[] = [];
-  if (raw.editorconfig === null) created.push((await writeEditorconfig(options.cwd, defaultEditorconfig(), options.dryRun)).path);
-  if (raw.gitattributes === null) created.push((await writeGitattributes(options.cwd, defaultGitattributes(), options.dryRun)).path);
-  return { mode: "add-config-defaults", dryRun: options.dryRun, created, modified: [] };
+  const unchanged: string[] = [];
+  if (raw.editorconfig === null) created.push((await writeEditorconfig(options.cwd, toNativeEol(defaultEditorconfig()), options.dryRun)).path);
+  else unchanged.push(".editorconfig");
+  if (raw.gitattributes === null) created.push((await writeGitattributes(options.cwd, toNativeEol(defaultGitattributes()), options.dryRun)).path);
+  else unchanged.push(".gitattributes");
+  return { mode: "add-config-defaults", dryRun: options.dryRun, created, modified: [], unchanged };
 }
 
 async function runAudit(options: RunOptions): Promise<RunReport> {
@@ -47,6 +61,5 @@ async function runAudit(options: RunOptions): Promise<RunReport> {
     if ("skip" in read) skipped.push({ path, reason: read.skip });
     else reports.push({ path, report: analyzeContent(read.content) });
   }
-  const nativeEol = process.platform === "win32" ? "crlf" : "lf";
-  return { mode: "audit", dryRun: options.dryRun, created: [], modified: [], audit: { files: audit(reports, config, nativeEol), skipped } };
+  return { mode: "audit", dryRun: options.dryRun, created: [], modified: [], unchanged: [], audit: { files: audit(reports, config, nativeEol()), skipped } };
 }
