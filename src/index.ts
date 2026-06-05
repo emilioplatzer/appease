@@ -2,9 +2,9 @@
 
 import { analyzeContent } from "./core/analyze.js";
 import { audit } from "./core/audit.js";
-import { interpretConfigs } from "./core/configs.js";
+import { defaultEditorconfig, defaultGitattributes, interpretConfigs } from "./core/configs.js";
 import type { AuditResult, FormatReport, RunOptions, RunReport } from "./core/types.js";
-import { readRawConfigs } from "./io/configs.js";
+import { readRawConfigs, writeEditorconfig, writeGitattributes } from "./io/configs.js";
 import { listTrackedFiles, readForAudit } from "./io/files.js";
 
 export * from "./core/types.js";
@@ -25,7 +25,17 @@ export { audit, deviationsToExceptions } from "./core/audit.js";
  */
 export async function runAppease(options: RunOptions): Promise<RunReport> {
   if (options.mode === "audit") return runAudit(options);
+  if (options.mode === "add-config-defaults") return runAddConfigDefaults(options);
   throw new Error(`mode not implemented yet: ${options.mode}`);
+}
+
+/** Write the pure-default configs, creating only the ones that do not exist yet (never overwrites). */
+async function runAddConfigDefaults(options: RunOptions): Promise<RunReport> {
+  const raw = await readRawConfigs(options.cwd);
+  const created: string[] = [];
+  if (raw.editorconfig === null) created.push((await writeEditorconfig(options.cwd, defaultEditorconfig(), options.dryRun)).path);
+  if (raw.gitattributes === null) created.push((await writeGitattributes(options.cwd, defaultGitattributes(), options.dryRun)).path);
+  return { mode: "add-config-defaults", dryRun: options.dryRun, created, modified: [] };
 }
 
 async function runAudit(options: RunOptions): Promise<RunReport> {

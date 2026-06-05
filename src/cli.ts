@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // CLI entry point. Maps switches to the public API and orchestrates the effects.
 
+import { resolve } from "node:path";
 import { parseArgs as nodeParseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
 import { runAppease } from "./index.js";
@@ -23,6 +24,7 @@ export function parseArgs(argv: string[]): RunOptions {
       yes: { type: "boolean" },
       "dry-run": { type: "boolean" },
       verbose: { type: "boolean" },
+      dir: { type: "string" },
     },
   });
   const modes = MODES.filter((mode) => values[mode] === true);
@@ -31,7 +33,7 @@ export function parseArgs(argv: string[]): RunOptions {
   }
   return {
     mode: modes[0],
-    cwd: process.cwd(),
+    cwd: values.dir !== undefined ? resolve(values.dir) : process.cwd(),
     dryRun: values["dry-run"] ?? false,
     yes: values.yes ?? false,
     verbose: values.verbose ?? false,
@@ -42,8 +44,8 @@ export function parseArgs(argv: string[]): RunOptions {
 export async function main(argv: string[]): Promise<number> {
   const report = await runAppease(parseArgs(argv));
   if (report.audit !== undefined) process.stdout.write(`${JSON.stringify(report.audit, null, 2)}\n`);
-  for (const path of report.created) process.stdout.write(`created: ${path}\n`);
-  for (const path of report.modified) process.stdout.write(`modified: ${path}\n`);
+  for (const path of report.created) process.stdout.write(`${report.dryRun ? "would create" : "created"}: ${path}\n`);
+  for (const path of report.modified) process.stdout.write(`${report.dryRun ? "would modify" : "modified"}: ${path}\n`);
   return 0;
 }
 
