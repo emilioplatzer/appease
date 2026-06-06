@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { promisify } from "node:util";
 import type { AuditResult } from "../core/types.js";
@@ -38,4 +38,14 @@ export async function readForAudit(cwd: string, path: string, isGitBinary: boole
   } catch {
     return { skip: "non-utf8" };
   }
+}
+
+/** Write UTF-8 `content` to a tracked file (a BOM in the string is encoded as bytes). */
+export async function writeText(cwd: string, path: string, content: string): Promise<void> {
+  await writeFile(join(cwd, path), content, "utf8");
+}
+
+/** Re-stage every tracked file so Git normalizes line endings per `.gitattributes`. */
+export async function gitRenormalize(cwd: string): Promise<void> {
+  await execFileAsync("git", ["add", "--renormalize", "."], { cwd });
 }

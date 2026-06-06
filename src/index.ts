@@ -6,9 +6,9 @@ import { defaultEditorconfig, defaultGitattributes, interpretConfigs } from "./c
 import { buildExceptions, mergeEditorconfig, mergeGitattributes } from "./core/merge.js";
 import type { AuditedFile } from "./core/merge.js";
 import { normalizeText } from "./core/normalize.js";
-import type { AuditResult, FormatReport, ProjectConfig, RunOptions, RunReport } from "./core/types.js";
+import type { AuditResult, DeviationAxis, FormatReport, NormalizeOptions, ProjectConfig, ResolvedFileConfig, RunOptions, RunReport } from "./core/types.js";
 import { readRawConfigs, writeEditorconfig, writeGitattributes } from "./io/configs.js";
-import { listTrackedFiles, readForAudit } from "./io/files.js";
+import { gitRenormalize, listTrackedFiles, readForAudit, writeText } from "./io/files.js";
 
 export * from "./core/types.js";
 export { analyzeContent } from "./core/analyze.js";
@@ -30,7 +30,7 @@ export async function runAppease(options: RunOptions): Promise<RunReport> {
   if (options.mode === "audit") return runAudit(options);
   if (options.mode === "add-config-defaults") return runAddConfigDefaults(options);
   if (options.mode === "adapt-configs") return runAdaptConfigs(options);
-  throw new Error(`mode not implemented yet: ${options.mode}`);
+  return runFixFormat(options);
 }
 
 /** This machine's native line ending — how `text=auto` resolves in the working tree. */
@@ -100,4 +100,37 @@ async function runAdaptConfigs(options: RunOptions): Promise<RunReport> {
   const modified = results.filter((r) => !r.created && r.modified).map((r) => r.path);
   const unchanged = results.filter((r) => !r.created && !r.modified).map((r) => r.path);
   return { mode: "adapt-configs", dryRun: options.dryRun, created, modified, unchanged };
+}
+
+/**
+ * Normalize each tracked file's content (BOM / trailing / final newline) per its resolved
+ * config, skipping axes the config could not resolve (case 2). EOL is left to Git; with
+ * `--apply-eol` a final `git add --renormalize .` applies it per `.gitattributes`.
+ */
+async function runFixFormat(options: RunOptions): Promise<RunReport> {
+  const config = interpretConfigs(await readRawConfigs(options.cwd));
+  const modified: string[] = [];
+  for (const path of await listTrackedFiles(options.cwd)) {
+    const resolved = config.resolve(path);
+    const read = await readForAudit(options.cwd, path, resolved.eol === "binary");
+    if ("skip" in read) continue;
+    const normalized = normalizeText(read.content, fixOptions(resolved));
+    if (normalized !== read.content) {
+      if (!options.dryRun) await writeText(options.cwd, path, normalized);
+      modified.push(path);
+    }
+  }
+  if (options.applyEol && !options.dryRun) await gitRenormalize(options.cwd);
+  return { mode: "fix-format", dryRun: options.dryRun, created: [], modified, unchanged: [] };
+}
+
+/** Map a resolved config to normalizer options: skip case-2 axes, and leave EOL to Git. */
+function fixOptions(resolved: ResolvedFileConfig): NormalizeOptions {
+  const enforce = (axis: DeviationAxis): boolean => !resolved.unresolved.includes(axis);
+  return {
+    bom: enforce("bom") ? resolved.bom : "keep",
+    eol: "keep",
+    trailing: enforce("trailing") ? resolved.trailing : "keep",
+    finalNewline: enforce("finalNewline") ? resolved.finalNewline : "keep",
+  };
 }
