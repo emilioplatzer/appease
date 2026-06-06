@@ -4,6 +4,7 @@
   "description": "Make pease in this app.",
   "license": "MIT",
   "author": "Emilio Platzer",
+  "repository": "emilioplatzer/appease",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -28,6 +29,11 @@
     "coverage": "c8 mocha",
     "prepublishOnly": "npm run build"
   },
+  "overrides": {
+    "diff": ">=8.0.2",
+    "serialize-javascript": ">=7.0.0",
+    "uuid": ">=14.0.0"
+  },
   "dependencies": {
     "picomatch": "^4.0.4"
   },
@@ -37,6 +43,13 @@
     "@types/picomatch": "^4.0.3",
     "c8": "^11.0.0",
     "mocha": "^11.7.6",
+    "qa-control": "^0.6.11",
     "typescript": "^6.0.3"
+  },
+  "qa-control": {
+    "profile": "minimum",
+    "run-in": "server",
+    "type": "cmd-tool",
+    "gha": true
   }
 }

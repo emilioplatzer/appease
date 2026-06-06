@@ -1,7 +1,7 @@
-
 # appease
 
-> Make pease in this app.
+
+Make peace in this app.
 
 
 [![stable](https://img.shields.io/badge/stability-stable-green.svg)](https://nodejs.org/api/documentation.html#documentation_stability_index) [![npm-version](https://img.shields.io/npm/v/appease.svg)](https://npmjs.org/package/appease) [![downloads](https://img.shields.io/npm/dm/appease.svg)](https://npmjs.org/package/appease) [![build](https://img.shields.io/github/actions/workflow/status/emilioplatzer/appease/ci.yml?branch=main)](https://github.com/emilioplatzer/appease/actions/workflows/ci.yml) [![coverage](https://coveralls.io/repos/github/emilioplatzer/appease/badge.svg?branch=main)](https://coveralls.io/github/emilioplatzer/appease?branch=main)
