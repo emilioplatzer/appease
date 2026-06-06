@@ -119,8 +119,6 @@ export interface RunOptions {
   yes: boolean;
   /** Verbose logging. */
   verbose: boolean;
-  /** Opt-in EOL normalization in `--fix-format` (e.g. `git add --renormalize .`). */
-  applyEol: boolean;
 }
 
 /** Outcome of a run: which files were created/modified, plus mode-specific payload. */

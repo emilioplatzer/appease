@@ -8,7 +8,7 @@ import type { AuditedFile } from "./core/merge.js";
 import { normalizeText } from "./core/normalize.js";
 import type { AuditResult, DeviationAxis, FormatReport, NormalizeOptions, ProjectConfig, ResolvedFileConfig, RunOptions, RunReport } from "./core/types.js";
 import { readRawConfigs, writeEditorconfig, writeGitattributes } from "./io/configs.js";
-import { gitRenormalize, listTrackedFiles, readForAudit, writeText } from "./io/files.js";
+import { listTrackedFiles, readForAudit, writeText } from "./io/files.js";
 
 export * from "./core/types.js";
 export { analyzeContent } from "./core/analyze.js";
@@ -103,33 +103,35 @@ async function runAdaptConfigs(options: RunOptions): Promise<RunReport> {
 }
 
 /**
- * Normalize each tracked file's content (BOM / trailing / final newline) per its resolved
- * config, skipping axes the config could not resolve (case 2). EOL is left to Git; with
- * `--apply-eol` a final `git add --renormalize .` applies it per `.gitattributes`.
+ * Normalize each tracked file's content (BOM / EOL / trailing / final newline) per its resolved
+ * config, skipping axes the config could not resolve (case 2). EOL is written directly into the
+ * working tree (`eol=auto` resolves to this machine's native ending), matching what `--audit` checks.
  */
 async function runFixFormat(options: RunOptions): Promise<RunReport> {
   const config = interpretConfigs(await readRawConfigs(options.cwd));
+  const native = nativeEol();
   const modified: string[] = [];
   for (const path of await listTrackedFiles(options.cwd)) {
     const resolved = config.resolve(path);
     const read = await readForAudit(options.cwd, path, resolved.eol === "binary");
     if ("skip" in read) continue;
-    const normalized = normalizeText(read.content, fixOptions(resolved));
+    const normalized = normalizeText(read.content, fixOptions(resolved, native));
     if (normalized !== read.content) {
       if (!options.dryRun) await writeText(options.cwd, path, normalized);
       modified.push(path);
     }
   }
-  if (options.applyEol && !options.dryRun) await gitRenormalize(options.cwd);
   return { mode: "fix-format", dryRun: options.dryRun, created: [], modified, unchanged: [] };
 }
 
-/** Map a resolved config to normalizer options: skip case-2 axes, and leave EOL to Git. */
-function fixOptions(resolved: ResolvedFileConfig): NormalizeOptions {
+/** Map a resolved config to normalizer options: skip case-2 axes; resolve `eol=auto` to native. */
+function fixOptions(resolved: ResolvedFileConfig, native: "lf" | "crlf"): NormalizeOptions {
   const enforce = (axis: DeviationAxis): boolean => !resolved.unresolved.includes(axis);
+  const eol: NormalizeOptions["eol"] =
+    !enforce("eol") || resolved.eol === "binary" ? "keep" : resolved.eol === "auto" ? native : resolved.eol;
   return {
     bom: enforce("bom") ? resolved.bom : "keep",
-    eol: "keep",
+    eol,
     trailing: enforce("trailing") ? resolved.trailing : "keep",
     finalNewline: enforce("finalNewline") ? resolved.finalNewline : "keep",
   };

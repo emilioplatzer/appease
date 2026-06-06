@@ -44,8 +44,3 @@ export async function readForAudit(cwd: string, path: string, isGitBinary: boole
 export async function writeText(cwd: string, path: string, content: string): Promise<void> {
   await writeFile(join(cwd, path), content, "utf8");
 }
-
-/** Re-stage every tracked file so Git normalizes line endings per `.gitattributes`. */
-export async function gitRenormalize(cwd: string): Promise<void> {
-  await execFileAsync("git", ["add", "--renormalize", "."], { cwd });
-}

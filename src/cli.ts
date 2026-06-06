@@ -20,7 +20,6 @@ export function parseArgs(argv: string[]): RunOptions {
       "add-config-defaults": { type: "boolean" },
       "adapt-configs": { type: "boolean" },
       "fix-format": { type: "boolean" },
-      "apply-eol": { type: "boolean" },
       yes: { type: "boolean" },
       "dry-run": { type: "boolean" },
       verbose: { type: "boolean" },
@@ -37,7 +36,6 @@ export function parseArgs(argv: string[]): RunOptions {
     dryRun: values["dry-run"] ?? false,
     yes: values.yes ?? false,
     verbose: values.verbose ?? false,
-    applyEol: values["apply-eol"] ?? false,
   };
 }
 
