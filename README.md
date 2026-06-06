@@ -4,7 +4,12 @@
 Make peace in this app.
 
 
-[![stable](https://img.shields.io/badge/stability-stable-green.svg)](https://nodejs.org/api/documentation.html#documentation_stability_index) [![npm-version](https://img.shields.io/npm/v/appease.svg)](https://npmjs.org/package/appease) [![downloads](https://img.shields.io/npm/dm/appease.svg)](https://npmjs.org/package/appease) [![build](https://img.shields.io/github/actions/workflow/status/emilioplatzer/appease/ci.yml?branch=main)](https://github.com/emilioplatzer/appease/actions/workflows/ci.yml) [![coverage](https://coveralls.io/repos/github/emilioplatzer/appease/badge.svg?branch=main)](https://coveralls.io/github/emilioplatzer/appease?branch=main)
+![designing](https://img.shields.io/badge/stability-designing-red.svg)
+[![npm-version](https://img.shields.io/npm/v/appease.svg)](https://npmjs.org/package/appease)
+[![downloads](https://img.shields.io/npm/dm/appease.svg)](https://npmjs.org/package/appease)
+[![build](https://github.com/emilioplatzer/appease/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/emilioplatzer/appease/actions/workflows/build-and-test.yml)
+[![security](https://socket.dev/api/badge/npm/package/appease)](https://socket.dev/npm/package/appease)
+[![qa-control](https://github.com/emilioplatzer/appease/actions/workflows/qa-control.yml/badge.svg)](https://github.com/emilioplatzer/appease/actions/workflows/qa-control.yml)
 
 
 language: ![English](https://raw.githubusercontent.com/codenautas/multilang/master/img/lang-en.png)

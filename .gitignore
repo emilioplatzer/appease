@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 
 # appease: compiled tests (not distributed)
 test-run/
+
+*-local.*
+local-*
