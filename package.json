@@ -24,7 +24,7 @@
     "build": "tsc",
     "build:test": "tsc -p test/tsconfig.json",
     "pretest": "npm run build:test",
-    "test": "mocha",
+    "test": "npm run && npm run build:test && mocha",
     "precoverage": "npm run build:test",
     "coverage": "c8 mocha",
     "prepublishOnly": "npm run build"
@@ -35,6 +35,7 @@
     "uuid": ">=14.0.0"
   },
   "dependencies": {
+    "cleye": "^2.6.0",
     "picomatch": "^4.0.4"
   },
   "devDependencies": {
