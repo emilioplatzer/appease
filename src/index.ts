@@ -56,21 +56,21 @@ async function runAddConfigDefaults(options: RunOptions): Promise<RunReport> {
 }
 
 /** Discover tracked files, skip binaries/non-UTF-8, and analyze the rest. */
-async function collectReports(cwd: string, config: ProjectConfig): Promise<{ reports: { path: string; report: FormatReport }[]; skipped: AuditResult["skipped"] }> {
+async function collectReports(cwd: string, config: ProjectConfig): Promise<{ reports: { path: string; report: FormatReport }[]; notAnalyzed: AuditResult["notAnalyzed"] }> {
   const reports: { path: string; report: FormatReport }[] = [];
-  const skipped: AuditResult["skipped"] = [];
+  const notAnalyzed: AuditResult["notAnalyzed"] = [];
   for (const path of await listTrackedFiles(cwd)) {
     const read = await readForAudit(cwd, path, config.resolve(path).eol === "binary");
-    if ("skip" in read) skipped.push({ path, reason: read.skip });
+    if ("skip" in read) notAnalyzed.push({ path, reason: read.skip });
     else reports.push({ path, report: analyzeContent(read.content) });
   }
-  return { reports, skipped };
+  return { reports, notAnalyzed };
 }
 
 async function runAudit(options: RunOptions): Promise<RunReport> {
   const config = interpretConfigs(await readRawConfigs(options.cwd));
-  const { reports, skipped } = await collectReports(options.cwd, config);
-  return { mode: "audit", dryRun: options.dryRun, created: [], modified: [], unchanged: [], audit: { files: audit(reports, config, nativeEol()), skipped } };
+  const { reports, notAnalyzed } = await collectReports(options.cwd, config);
+  return { mode: "audit", dryRun: options.dryRun, created: [], modified: [], unchanged: [], audit: { findings: audit(reports, config, nativeEol()), notAnalyzed } };
 }
 
 /**

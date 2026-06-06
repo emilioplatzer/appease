@@ -6,7 +6,7 @@ import type { AuditResult } from "../core/types.js";
 
 const execFileAsync = promisify(execFile);
 
-type SkipReason = AuditResult["skipped"][number]["reason"];
+type SkipReason = AuditResult["notAnalyzed"][number]["reason"];
 
 /** Known-binary file extensions; the embedded list (a `.appease` override may come later). */
 const BINARY_EXTENSIONS = new Set([

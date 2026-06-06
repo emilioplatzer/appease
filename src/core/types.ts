@@ -97,9 +97,10 @@ export interface FileAudit {
 
 /** Full audit result. `--audit` prints this as canonical JSON. */
 export interface AuditResult {
-  files: FileAudit[];
-  /** Files skipped (binary / `-text` / non-UTF-8), with the reason. */
-  skipped: { path: string; reason: "binary-extension" | "binary-content" | "gitattributes-notext" | "non-utf8" }[];
+  /** Analyzed files that deviate from their resolved config (conforming files are omitted). */
+  findings: FileAudit[];
+  /** Files not analyzed (binary / `-text` / non-UTF-8), with the reason. */
+  notAnalyzed: { path: string; reason: "binary-extension" | "binary-content" | "gitattributes-notext" | "non-utf8" }[];
 }
 
 // ---------------------------------------------------------------------------
