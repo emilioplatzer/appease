@@ -144,18 +144,21 @@ indent_style = tab
 
 ## Modes
 
-Every mode prints at the end **which files it created or modified**.
+Every command prints at the end **which files it created or modified**.
 
-| Mode | Reads | Writes | Destructive |
+Each command takes the directory to process as an optional positional argument
+(`appease <command> [dir]`; defaults to the current directory).
+
+| Command | Reads | Writes | Destructive |
 |---|---|---|---|
-| `--audit` | existing configs (or the defaults it would propose) + the files | nothing, only **reports** what is out of spec | no |
-| `--add-config-defaults` | — | the configs with **pure defaults** (without looking at reality) | no (only creates config) |
-| `--adapt-configs` | configs + audit | creates or **adapts** the configs to reflect what was found | does not touch source code |
-| `--fix-format` | configs | **modifies the files** (BOM, trailing, newline; EOL via Git) honoring the configs | yes (Git reverts) |
+| `audit` | existing configs (or the defaults it would propose) + the files | nothing, only **reports** what is out of spec | no |
+| `add-config-defaults` | — | the configs with **pure defaults** (without looking at reality) | no (only creates config) |
+| `adapt-configs` | configs + audit | creates or **adapts** the configs to reflect what was found | does not touch source code |
+| `fix-format` | configs | **modifies the files** (BOM, trailing, newline; EOL via Git) honoring the configs | yes (Git reverts) |
 
-### `--audit`: report format
+### `audit`: report format
 
-`--audit` prints canonical JSON with **two** lists. The key point is that conforming files
+`audit` prints canonical JSON with **two** lists. The key point is that conforming files
 **appear in neither**: only the ones that need attention and the ones that couldn't be
 evaluated are listed. A clean repo yields both lists empty:
 
@@ -176,16 +179,16 @@ evaluated are listed. A clean repo yields both lists empty:
 This format is **provisional**: today the output is the direct serialization of the
 `AuditResult` type, meant to be easy to parse and test. It may grow if the value justifies it.
 
-### `--adapt-configs`: records every deviation as an exception
+### `adapt-configs`: records every deviation as an exception
 
-`--adapt-configs` records **every** deviation it finds as an explicit exception, across all
+`adapt-configs` records **every** deviation it finds as an explicit exception, across all
 axes equally (without classifying or guessing intent). This gives a safety invariant: **right
-after `--adapt-configs`, a `--fix-format` changes nothing**, because the config describes
-reality 100%. Only when you **prune** (delete) exceptions does `--fix-format` touch *that and
+after `adapt-configs`, a `fix-format` changes nothing**, because the config describes
+reality 100%. Only when you **prune** (delete) exceptions does `fix-format` touch *that and
 only that*.
 
 So, "everything is wrong and I want to fix it all at once" is solved by deleting the block of
-exceptions: everything falls back to the default → `--fix-format` rewrites whatever is needed.
+exceptions: everything falls back to the default → `fix-format` rewrites whatever is needed.
 
 Behavior details:
 
@@ -206,13 +209,13 @@ by hand.
 
 ## Suggested workflow
 
-0. *(optional)* `--add-config-defaults` → **commit**. Versions the "north star" (the pure
+0. *(optional)* `add-config-defaults` → **commit**. Versions the "north star" (the pure
    norm), so that in step 1 deviations stand out in the diff against that norm.
-1. `--adapt-configs` → the `git diff` of the configs shows **every added exception = every
+1. `adapt-configs` → the `git diff` of the configs shows **every added exception = every
    deviation**. That diff is the real report.
 2. Review those exceptions: keep the ones that were on purpose, **delete** by hand the ones
    that were junk (if almost everything is wrong, delete the whole block).
-3. `--fix-format` → normalizes everything no longer protected by an exception.
+3. `fix-format` → normalizes everything no longer protected by an exception.
 
 Since Git reverts anything, the destructive steps are safe to try.
 
@@ -252,12 +255,12 @@ Strongly typed, `strict`, no `any`. Errors are handled, not ignored.
 
 ### `cli.ts`
 
-Maps the switches (`--audit`, `--add-config-defaults`, `--adapt-configs`, `--fix-format`) to
+Maps the commands (`audit`, `add-config-defaults`, `adapt-configs`, `fix-format`) to
 TS calls and orchestrates the effects:
 
 1. Discovers files (`git ls-files`), skips binaries and the ones marked `-text`.
 2. Reads `.gitattributes` and `.editorconfig` to resolve the per-file options.
-3. Depending on the mode: only reports, generates/adapts configs, or reads each file, calls
+3. Depending on the command: only reports, generates/adapts configs, or reads each file, calls
    the pure function and rewrites if it changed.
 4. Prints the summary of created/modified files.
 
@@ -267,7 +270,7 @@ TS calls and orchestrates the effects:
 ## To be defined at implementation time
 
 - Default value for `indent_size` (probably detected per project/language).
-- Exact format of the `--audit` report (provisional today, documented above).
+- Exact format of the `audit` report (provisional today, documented above).
 - Binary detection and handling of files in encodings other than UTF-8.
 - Concrete `--tabs-*` switches.
 

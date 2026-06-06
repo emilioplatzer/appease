@@ -270,46 +270,53 @@ indent_style = tab
 ---
 
 <!--lang:es-->
-## Modos
+## Comandos
 
 <!--lang:en--]
-## Modes
+## Commands
 
 [!--lang:es-->
-Todos los modos imprimen al final **qué archivos crearon o modificaron**.
+Todos los comandos imprimen al final **qué archivos crearon o modificaron**.
+
+Cada comando toma el directorio a procesar como argumento posicional opcional
+(`appease <comando> [dir]`; por defecto, el directorio actual).
 
 <!--lang:en--]
-Every mode prints at the end **which files it created or modified**.
+Every command prints at the end **which files it created or modified**.
+
+Each command takes the directory to process as an optional positional argument
+(`appease <command> [dir]`; defaults to the current directory).
+
 
 [!--lang:es-->
-| Modo | Lee | Escribe | Destructivo |
+| Comando | Lee | Escribe | Destructivo |
 |---|---|---|---|
-| `--audit` | configs existentes (o los defaults que propondría) + los archivos | nada, solo **reporta** lo que está fuera de norma | no |
-| `--add-config-defaults` | — | los configs con **defaults puros** (sin mirar la realidad) | no (solo crea config) |
-| `--adapt-configs` | configs + audit | crea o **adapta** los configs para reflejar lo encontrado | no toca el código fuente |
-| `--fix-format` | configs | **modifica los archivos** (BOM, trailing, newline; EOL vía Git) respetando los configs | sí (Git revierte) |
+| `audit` | configs existentes (o los defaults que propondría) + los archivos | nada, solo **reporta** lo que está fuera de norma | no |
+| `add-config-defaults` | — | los configs con **defaults puros** (sin mirar la realidad) | no (solo crea config) |
+| `adapt-configs` | configs + audit | crea o **adapta** los configs para reflejar lo encontrado | no toca el código fuente |
+| `fix-format` | configs | **modifica los archivos** (BOM, trailing, newline; EOL vía Git) respetando los configs | sí (Git revierte) |
 
 <!--lang:en--]
-| Mode | Reads | Writes | Destructive |
+| Command | Reads | Writes | Destructive |
 |---|---|---|---|
-| `--audit` | existing configs (or the defaults it would propose) + the files | nothing, only **reports** what is out of spec | no |
-| `--add-config-defaults` | — | the configs with **pure defaults** (without looking at reality) | no (only creates config) |
-| `--adapt-configs` | configs + audit | creates or **adapts** the configs to reflect what was found | does not touch source code |
-| `--fix-format` | configs | **modifies the files** (BOM, trailing, newline; EOL via Git) honoring the configs | yes (Git reverts) |
+| `audit` | existing configs (or the defaults it would propose) + the files | nothing, only **reports** what is out of spec | no |
+| `add-config-defaults` | — | the configs with **pure defaults** (without looking at reality) | no (only creates config) |
+| `adapt-configs` | configs + audit | creates or **adapts** the configs to reflect what was found | does not touch source code |
+| `fix-format` | configs | **modifies the files** (BOM, trailing, newline; EOL via Git) honoring the configs | yes (Git reverts) |
 
 [!--lang:es-->
-### `--audit`: formato del reporte
+### `audit`: formato del reporte
 
 <!--lang:en--]
-### `--audit`: report format
+### `audit`: report format
 
 [!--lang:es-->
-`--audit` imprime un JSON canónico con **dos** listas. La clave es que los archivos
+`audit` imprime un JSON canónico con **dos** listas. La clave es que los archivos
 **conformes no aparecen en ninguna**: solo se listan los que requieren atención y los que no
 se pudieron evaluar. Un repo limpio da ambas listas vacías:
 
 <!--lang:en--]
-`--audit` prints canonical JSON with **two** lists. The key point is that conforming files
+`audit` prints canonical JSON with **two** lists. The key point is that conforming files
 **appear in neither**: only the ones that need attention and the ones that couldn't be
 evaluated are listed. A clean repo yields both lists empty:
 
@@ -345,32 +352,32 @@ This format is **provisional**: today the output is the direct serialization of 
 `AuditResult` type, meant to be easy to parse and test. It may grow if the value justifies it.
 
 [!--lang:es-->
-### `--adapt-configs`: registra toda desviación como excepción
+### `adapt-configs`: registra toda desviación como excepción
 
 <!--lang:en--]
-### `--adapt-configs`: records every deviation as an exception
+### `adapt-configs`: records every deviation as an exception
 
 [!--lang:es-->
-`--adapt-configs` registra **toda** desviación encontrada como excepción explícita, en todos
+`adapt-configs` registra **toda** desviación encontrada como excepción explícita, en todos
 los ejes por igual (sin clasificar ni adivinar intención). Esto da una invariante de
-seguridad: **justo después de `--adapt-configs`, un `--fix-format` no cambia nada**, porque la
+seguridad: **justo después de `adapt-configs`, un `fix-format` no cambia nada**, porque la
 config describe la realidad al 100%. Recién cuando uno **poda** (borra) excepciones,
-`--fix-format` toca *eso y solo eso*.
+`fix-format` toca *eso y solo eso*.
 
 <!--lang:en--]
-`--adapt-configs` records **every** deviation it finds as an explicit exception, across all
+`adapt-configs` records **every** deviation it finds as an explicit exception, across all
 axes equally (without classifying or guessing intent). This gives a safety invariant: **right
-after `--adapt-configs`, a `--fix-format` changes nothing**, because the config describes
-reality 100%. Only when you **prune** (delete) exceptions does `--fix-format` touch *that and
+after `adapt-configs`, a `fix-format` changes nothing**, because the config describes
+reality 100%. Only when you **prune** (delete) exceptions does `fix-format` touch *that and
 only that*.
 
 [!--lang:es-->
 Así, "está todo mal y lo quiero arreglar de una" se resuelve borrando el bloque de
-excepciones: todo cae al default → `--fix-format` reescribe lo que haga falta.
+excepciones: todo cae al default → `fix-format` reescribe lo que haga falta.
 
 <!--lang:en--]
 So, "everything is wrong and I want to fix it all at once" is solved by deleting the block of
-exceptions: everything falls back to the default → `--fix-format` rewrites whatever is needed.
+exceptions: everything falls back to the default → `fix-format` rewrites whatever is needed.
 
 [!--lang:es-->
 Detalles de comportamiento:
@@ -419,22 +426,22 @@ by hand.
 ## Suggested workflow
 
 [!--lang:es-->
-0. *(opcional)* `--add-config-defaults` → **commit**. Deja versionado el "norte" (la norma
+0. *(opcional)* `add-config-defaults` → **commit**. Deja versionado el "norte" (la norma
    pura), para que en el paso 1 las desviaciones salten en el diff contra esa norma.
-1. `--adapt-configs` → el `git diff` de los configs muestra **cada excepción agregada = cada
+1. `adapt-configs` → el `git diff` de los configs muestra **cada excepción agregada = cada
    desviación**. Ese diff es el reporte de verdad.
 2. Revisar esas excepciones: dejar las que eran a propósito, **borrar** a mano las que eran
    porquería (si está casi todo mal, borrar todo el bloque).
-3. `--fix-format` → normaliza todo lo que ya no quede protegido por una excepción.
+3. `fix-format` → normaliza todo lo que ya no quede protegido por una excepción.
 
 <!--lang:en--]
-0. *(optional)* `--add-config-defaults` → **commit**. Versions the "north star" (the pure
+0. *(optional)* `add-config-defaults` → **commit**. Versions the "north star" (the pure
    norm), so that in step 1 deviations stand out in the diff against that norm.
-1. `--adapt-configs` → the `git diff` of the configs shows **every added exception = every
+1. `adapt-configs` → the `git diff` of the configs shows **every added exception = every
    deviation**. That diff is the real report.
 2. Review those exceptions: keep the ones that were on purpose, **delete** by hand the ones
    that were junk (if almost everything is wrong, delete the whole block).
-3. `--fix-format` → normalizes everything no longer protected by an exception.
+3. `fix-format` → normalizes everything no longer protected by an exception.
 
 [!--lang:es-->
 Como Git revierte cualquier cosa, los pasos destructivos son seguros de probar.
@@ -526,24 +533,24 @@ Strongly typed, `strict`, no `any`. Errors are handled, not ignored.
 ### `cli.ts`
 
 <!--lang:es-->
-Mapea los switches (`--audit`, `--add-config-defaults`, `--adapt-configs`, `--fix-format`) a
+Mapea los comandos (`audit`, `add-config-defaults`, `adapt-configs`, `fix-format`) a
 llamadas TS y orquesta los efectos:
 
 <!--lang:en--]
-Maps the switches (`--audit`, `--add-config-defaults`, `--adapt-configs`, `--fix-format`) to
+Maps the commands (`audit`, `add-config-defaults`, `adapt-configs`, `fix-format`) to
 TS calls and orchestrates the effects:
 
 [!--lang:es-->
 1. Descubre archivos (`git ls-files`), saltea binarios y los marcados `-text`.
 2. Lee `.gitattributes` y `.editorconfig` para resolver las opciones por archivo.
-3. Según el modo: solo reporta, genera/adapta configs, o lee cada archivo, llama a la función
+3. Según el comando: solo reporta, genera/adapta configs, o lee cada archivo, llama a la función
    pura y reescribe si cambió.
 4. Imprime el resumen de archivos creados/modificados.
 
 <!--lang:en--]
 1. Discovers files (`git ls-files`), skips binaries and the ones marked `-text`.
 2. Reads `.gitattributes` and `.editorconfig` to resolve the per-file options.
-3. Depending on the mode: only reports, generates/adapts configs, or reads each file, calls
+3. Depending on the command: only reports, generates/adapts configs, or reads each file, calls
    the pure function and rewrites if it changed.
 4. Prints the summary of created/modified files.
 
@@ -559,13 +566,13 @@ TS calls and orchestrates the effects:
 
 [!--lang:es-->
 - Valor por defecto de `indent_size` (probablemente detectado por proyecto/lenguaje).
-- Formato exacto del reporte de `--audit` (hoy provisional, documentado más arriba).
+- Formato exacto del reporte de `audit` (hoy provisional, documentado más arriba).
 - Detección de binarios y manejo de archivos en encodings distintos de UTF-8.
 - Switches concretos de `--tabs-*`.
 
 <!--lang:en--]
 - Default value for `indent_size` (probably detected per project/language).
-- Exact format of the `--audit` report (provisional today, documented above).
+- Exact format of the `audit` report (provisional today, documented above).
 - Binary detection and handling of files in encodings other than UTF-8.
 - Concrete `--tabs-*` switches.
 
