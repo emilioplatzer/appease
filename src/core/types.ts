@@ -102,16 +102,6 @@ export interface AuditResult {
   skipped: { path: string; reason: "binary-extension" | "binary-content" | "gitattributes-notext" | "non-utf8" }[];
 }
 
-/** An explicit exception written by `--adapt-configs` to protect a real deviation. */
-export interface ExceptionEntry {
-  /** Owning config file: EOL lives in .gitattributes, everything else in .editorconfig. */
-  owner: "editorconfig" | "gitattributes";
-  /** The glob / path the exception applies to. */
-  pattern: string;
-  /** Axes this exception covers. */
-  axes: DeviationAxis[];
-}
-
 // ---------------------------------------------------------------------------
 // CLI / run options and report.
 // ---------------------------------------------------------------------------

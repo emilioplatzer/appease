@@ -3,8 +3,10 @@
 import { analyzeContent } from "./core/analyze.js";
 import { audit } from "./core/audit.js";
 import { defaultEditorconfig, defaultGitattributes, interpretConfigs } from "./core/configs.js";
+import { buildExceptions, mergeEditorconfig, mergeGitattributes } from "./core/merge.js";
+import type { AuditedFile } from "./core/merge.js";
 import { normalizeText } from "./core/normalize.js";
-import type { AuditResult, FormatReport, RunOptions, RunReport } from "./core/types.js";
+import type { AuditResult, FormatReport, ProjectConfig, RunOptions, RunReport } from "./core/types.js";
 import { readRawConfigs, writeEditorconfig, writeGitattributes } from "./io/configs.js";
 import { listTrackedFiles, readForAudit } from "./io/files.js";
 
@@ -13,7 +15,7 @@ export { analyzeContent } from "./core/analyze.js";
 export { normalizeText } from "./core/normalize.js";
 export { interpretConfigs, defaultEditorconfig, defaultGitattributes } from "./core/configs.js";
 export { readRawConfigs, writeEditorconfig, writeGitattributes } from "./io/configs.js";
-export { audit, deviationsToExceptions } from "./core/audit.js";
+export { audit } from "./core/audit.js";
 
 /**
  * Run a full appease operation according to `options.mode`:
@@ -27,6 +29,7 @@ export { audit, deviationsToExceptions } from "./core/audit.js";
 export async function runAppease(options: RunOptions): Promise<RunReport> {
   if (options.mode === "audit") return runAudit(options);
   if (options.mode === "add-config-defaults") return runAddConfigDefaults(options);
+  if (options.mode === "adapt-configs") return runAdaptConfigs(options);
   throw new Error(`mode not implemented yet: ${options.mode}`);
 }
 
@@ -52,14 +55,49 @@ async function runAddConfigDefaults(options: RunOptions): Promise<RunReport> {
   return { mode: "add-config-defaults", dryRun: options.dryRun, created, modified: [], unchanged };
 }
 
-async function runAudit(options: RunOptions): Promise<RunReport> {
-  const config = interpretConfigs(await readRawConfigs(options.cwd));
+/** Discover tracked files, skip binaries/non-UTF-8, and analyze the rest. */
+async function collectReports(cwd: string, config: ProjectConfig): Promise<{ reports: { path: string; report: FormatReport }[]; skipped: AuditResult["skipped"] }> {
   const reports: { path: string; report: FormatReport }[] = [];
   const skipped: AuditResult["skipped"] = [];
-  for (const path of await listTrackedFiles(options.cwd)) {
-    const read = await readForAudit(options.cwd, path, config.resolve(path).eol === "binary");
+  for (const path of await listTrackedFiles(cwd)) {
+    const read = await readForAudit(cwd, path, config.resolve(path).eol === "binary");
     if ("skip" in read) skipped.push({ path, reason: read.skip });
     else reports.push({ path, report: analyzeContent(read.content) });
   }
+  return { reports, skipped };
+}
+
+async function runAudit(options: RunOptions): Promise<RunReport> {
+  const config = interpretConfigs(await readRawConfigs(options.cwd));
+  const { reports, skipped } = await collectReports(options.cwd, config);
   return { mode: "audit", dryRun: options.dryRun, created: [], modified: [], unchanged: [], audit: { files: audit(reports, config, nativeEol()), skipped } };
+}
+
+/**
+ * Establish the default configs as a baseline (in memory if absent), audit the repo
+ * against it, and merge an exception for every deviation so a later `--fix-format`
+ * changes nothing. Existing config content is preserved; new exceptions are appended.
+ */
+async function runAdaptConfigs(options: RunOptions): Promise<RunReport> {
+  const raw = await readRawConfigs(options.cwd);
+  const editorconfigBase = raw.editorconfig ?? toNativeEol(defaultEditorconfig());
+  const gitattributesBase = raw.gitattributes ?? toNativeEol(defaultGitattributes());
+  const config = interpretConfigs({ editorconfig: editorconfigBase, gitattributes: gitattributesBase, vscodeSettings: raw.vscodeSettings });
+
+  const { reports } = await collectReports(options.cwd, config);
+  const deviationsByPath = new Map(audit(reports, config, nativeEol()).map((finding) => [finding.path, finding.deviations]));
+  const audited: AuditedFile[] = reports.flatMap((report) => {
+    const deviations = deviationsByPath.get(report.path);
+    return deviations !== undefined ? [{ path: report.path, report: report.report, deviations }] : [];
+  });
+  const exceptions = buildExceptions(audited);
+
+  const results = [
+    await writeEditorconfig(options.cwd, mergeEditorconfig(editorconfigBase, exceptions.editorconfig), options.dryRun),
+    await writeGitattributes(options.cwd, mergeGitattributes(gitattributesBase, exceptions.gitattributes), options.dryRun),
+  ];
+  const created = results.filter((r) => r.created).map((r) => r.path);
+  const modified = results.filter((r) => !r.created && r.modified).map((r) => r.path);
+  const unchanged = results.filter((r) => !r.created && !r.modified).map((r) => r.path);
+  return { mode: "adapt-configs", dryRun: options.dryRun, created, modified, unchanged };
 }

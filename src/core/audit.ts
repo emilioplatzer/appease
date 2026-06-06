@@ -1,4 +1,4 @@
-import type { DeviationAxis, ExceptionEntry, FileAudit, FormatReport, ProjectConfig, ResolvedFileConfig } from "./types.js";
+import type { DeviationAxis, FileAudit, FormatReport, ProjectConfig, ResolvedFileConfig } from "./types.js";
 
 /**
  * Evaluate a collection of per-file analyses against the resolved project
@@ -45,21 +45,4 @@ function fileDeviations(report: FormatReport, cfg: ResolvedFileConfig, nativeEol
     // "binary" -> EOL is not evaluated
   }
   return deviations;
-}
-
-/**
- * Turn audited deviations into the explicit exceptions that `--adapt-configs`
- * writes, so that a subsequent `--fix-format` changes nothing (the safety
- * invariant). Each file's deviations are routed to the config file that owns
- * each axis: EOL -> `.gitattributes`, everything else -> `.editorconfig`.
- */
-export function deviationsToExceptions(files: FileAudit[]): ExceptionEntry[] {
-  const exceptions: ExceptionEntry[] = [];
-  for (const file of files) {
-    const editorconfigAxes = file.deviations.filter((axis) => axis !== "eol");
-    const gitattributesAxes = file.deviations.filter((axis) => axis === "eol");
-    if (editorconfigAxes.length > 0) exceptions.push({ owner: "editorconfig", pattern: file.path, axes: editorconfigAxes });
-    if (gitattributesAxes.length > 0) exceptions.push({ owner: "gitattributes", pattern: file.path, axes: gitattributesAxes });
-  }
-  return exceptions;
 }

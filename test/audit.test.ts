@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { audit, deviationsToExceptions } from "../src/core/audit.js";
+import { audit } from "../src/core/audit.js";
 import type { DeviationAxis, FileAudit, FormatReport, ProjectConfig, ResolvedFileConfig } from "../src/core/types.js";
 
 function report(over: Partial<FormatReport>): FormatReport {
@@ -103,25 +103,5 @@ describe("audit", () => {
         ["dirty.txt"],
       );
     });
-  });
-});
-
-describe("deviationsToExceptions", () => {
-  function fileAudit(deviations: DeviationAxis[]): FileAudit {
-    return { path: "p", deviations, unresolved: [] };
-  }
-
-  it("routes EOL to .gitattributes and the rest to .editorconfig", () => {
-    assert.deepEqual(deviationsToExceptions([fileAudit(["bom", "eol", "trailing"])]), [
-      { owner: "editorconfig", pattern: "p", axes: ["bom", "trailing"] },
-      { owner: "gitattributes", pattern: "p", axes: ["eol"] },
-    ]);
-  });
-  it("emits only the owner that has axes", () => {
-    assert.deepEqual(deviationsToExceptions([fileAudit(["eol"])]), [{ owner: "gitattributes", pattern: "p", axes: ["eol"] }]);
-    assert.deepEqual(deviationsToExceptions([fileAudit(["bom"])]), [{ owner: "editorconfig", pattern: "p", axes: ["bom"] }]);
-  });
-  it("is empty for no files", () => {
-    assert.deepEqual(deviationsToExceptions([]), []);
   });
 });
