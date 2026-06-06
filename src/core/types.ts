@@ -116,10 +116,6 @@ export interface RunOptions {
   cwd: string;
   /** Simulate writes; report what would change but touch nothing. */
   dryRun: boolean;
-  /** Skip interactive confirmations for destructive operations. */
-  yes: boolean;
-  /** Verbose logging. */
-  verbose: boolean;
 }
 
 /** Outcome of a run: which files were created/modified, plus mode-specific payload. */
