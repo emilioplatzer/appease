@@ -90,8 +90,8 @@ describe("config defaults", () => {
       const ec = parseEditorconfig(content);
       assert.equal(ec.root, true);
       assert.deepEqual(resolveEditorconfig(ec, "a.js"), { charset: "utf-8", trailing: "trim", finalNewline: "ensure", unresolved: [] });
-      // Markdown keeps its intentional trailing spaces
-      assert.equal(resolveEditorconfig(ec, "README.md").trailing, "keep");
+      // Markdown is trimmed too — no special-casing
+      assert.equal(resolveEditorconfig(ec, "README.md").trailing, "trim");
     });
   });
 

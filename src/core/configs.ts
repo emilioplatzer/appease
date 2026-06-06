@@ -51,10 +51,6 @@ export function defaultEditorconfig(): string {
     "insert_final_newline = true",
     "indent_style = space",
     "",
-    "# Markdown: two trailing spaces are an intentional line break",
-    "[*.md]",
-    "trim_trailing_whitespace = false",
-    "",
   ].join("\n");
 }
 
