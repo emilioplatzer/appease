@@ -1,16 +1,13 @@
 <!--multilang v0 es:LEEME.md en:README.md -->
+# appease
 
 <!--lang:es-->
-# appease
+
+Normaliza + pacifica: deja los archivos de texto de un repositorio parejos y "en paz".
 
 <!--lang:en--]
-# appease
 
-[!--lang:es-->
-> Normaliza + pacifica: deja los archivos de texto de un repositorio parejos y "en paz".
-
-<!--lang:en--]
-> Make peace in this app.
+Make peace in this app.
 
 [!--lang:*-->
 
