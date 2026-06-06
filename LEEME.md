@@ -135,6 +135,28 @@ Todos los modos imprimen al final **qué archivos crearon o modificaron**.
 | `--adapt-configs` | configs + audit | crea o **adapta** los configs para reflejar lo encontrado | no toca el código fuente |
 | `--fix-format` | configs | **modifica los archivos** (BOM, trailing, newline; EOL vía Git) respetando los configs | sí (Git revierte) |
 
+### `--audit`: formato del reporte
+
+`--audit` imprime un JSON canónico con **dos** listas. La clave es que los archivos
+**conformes no aparecen en ninguna**: solo se listan los que requieren atención y los que no
+se pudieron evaluar. Un repo limpio da ambas listas vacías:
+
+```json
+{
+  "findings": [],
+  "notAnalyzed": []
+}
+```
+
+- **`findings`**: archivos **analizados que se desvían** de su config resuelta. Cada entrada
+  trae `path`, `deviations` (ejes que difieren de lo que pide la config) y `unresolved` (ejes
+  gobernados por un valor de config no reconocido: no se evalúan, se reportan como están).
+- **`notAnalyzed`**: archivos que **no se analizaron**, con su `reason`
+  (`binary-extension`, `binary-content`, `gitattributes-notext`, `non-utf8`).
+
+Este formato es **provisional**: hoy el output es la serialización directa del tipo
+`AuditResult`, pensada para parsear y testear fácil. Puede crecer si el valor lo justifica.
+
 ### `--adapt-configs`: registra toda desviación como excepción
 
 `--adapt-configs` registra **toda** desviación encontrada como excepción explícita, en todos
@@ -222,6 +244,6 @@ llamadas TS y orquesta los efectos:
 ## Pendientes a definir al implementar
 
 - Valor por defecto de `indent_size` (probablemente detectado por proyecto/lenguaje).
-- Formato exacto del reporte de `--audit`.
+- Formato exacto del reporte de `--audit` (hoy provisional, documentado más arriba).
 - Detección de binarios y manejo de archivos en encodings distintos de UTF-8.
 - Switches concretos de `--tabs-*`.
