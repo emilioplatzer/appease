@@ -273,4 +273,3 @@ TS calls and orchestrates the effects:
 - Exact format of the `audit` report (provisional today, documented above).
 - Binary detection and handling of files in encodings other than UTF-8.
 - Concrete `--tabs-*` switches.
-
