@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { RawConfigs } from "../core/types.js";
 
@@ -24,6 +24,17 @@ async function readOrNull(path: string): Promise<string | null> {
  * interpretation lives in the pure core (`interpretConfigs`).
  */
 export async function readRawConfigs(cwd: string): Promise<RawConfigs> {
+  // Direct access to the target directory, before any git spawn: surfaces a wrong/missing
+  // directory as a clear error instead of a cryptic `spawn git ENOENT`.
+  let stats: Awaited<ReturnType<typeof stat>>;
+  try {
+    stats = await stat(cwd);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") throw new Error(`Directory not found: ${cwd}`);
+    throw err;
+  }
+  if (!stats.isDirectory()) throw new Error(`Not a directory: ${cwd}`);
+
   const [editorconfig, gitattributes, vscodeSettings] = await Promise.all([
     readOrNull(join(cwd, ".editorconfig")),
     readOrNull(join(cwd, ".gitattributes")),

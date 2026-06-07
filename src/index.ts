@@ -8,7 +8,7 @@ import type { AuditedFile } from "./core/merge.js";
 import { normalizeText } from "./core/normalize.js";
 import type { AuditResult, DeviationAxis, FormatReport, NormalizeOptions, ProjectConfig, ResolvedFileConfig, RunOptions, RunReport } from "./core/types.js";
 import { readRawConfigs, writeEditorconfig, writeGitattributes } from "./io/configs.js";
-import { listTrackedFiles, readForAudit, writeText } from "./io/files.js";
+import { hasUncommittedChanges, listTrackedFiles, readForAudit, writeText } from "./io/files.js";
 
 export * from "./core/types.js";
 export { analyzeContent } from "./core/analyze.js";
@@ -70,7 +70,10 @@ async function collectReports(cwd: string, config: ProjectConfig): Promise<{ rep
 async function runAudit(options: RunOptions): Promise<RunReport> {
   const config = interpretConfigs(await readRawConfigs(options.cwd));
   const { reports, notAnalyzed } = await collectReports(options.cwd, config);
-  return { mode: "audit", dryRun: options.dryRun, created: [], modified: [], unchanged: [], audit: { findings: audit(reports, config, nativeEol()), notAnalyzed } };
+  const warnings = (await hasUncommittedChanges(options.cwd))
+    ? ["repository has uncommitted changes; the audit reflects the current working tree, not a committed state"]
+    : [];
+  return { mode: "audit", dryRun: options.dryRun, created: [], modified: [], unchanged: [], audit: { findings: audit(reports, config, nativeEol()), notAnalyzed }, warnings };
 }
 
 /**

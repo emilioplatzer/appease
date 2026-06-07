@@ -100,7 +100,7 @@ export interface AuditResult {
   /** Analyzed files that deviate from their resolved config (conforming files are omitted). */
   findings: FileAudit[];
   /** Files not analyzed (binary / `-text` / non-UTF-8), with the reason. */
-  notAnalyzed: { path: string; reason: "binary-extension" | "binary-content" | "gitattributes-notext" | "non-utf8" }[];
+  notAnalyzed: { path: string; reason: "binary-extension" | "binary-content" | "gitattributes-notext" | "non-utf8" | "missing" }[];
 }
 
 // ---------------------------------------------------------------------------
@@ -129,4 +129,6 @@ export interface RunReport {
   unchanged: string[];
   /** Present for `--audit`. */
   audit?: AuditResult;
+  /** Non-fatal advisories (e.g. uncommitted changes during an audit). Printed to stderr. */
+  warnings?: string[];
 }

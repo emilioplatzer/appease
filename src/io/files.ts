@@ -23,6 +23,12 @@ export async function listTrackedFiles(cwd: string): Promise<string[]> {
   return stdout.split("\0").filter((path) => path !== "");
 }
 
+/** Whether the working tree has uncommitted changes (modified, staged, or untracked). Read-only. */
+export async function hasUncommittedChanges(cwd: string): Promise<boolean> {
+  const { stdout } = await execFileAsync("git", ["status", "--porcelain"], { cwd, maxBuffer: 64 * 1024 * 1024 });
+  return stdout.trim() !== "";
+}
+
 /**
  * Read a file for auditing: skip binaries (declared `-text`, known extension, or
  * NUL content) and non-UTF-8 files; otherwise decode keeping any leading BOM.
@@ -30,7 +36,15 @@ export async function listTrackedFiles(cwd: string): Promise<string[]> {
 export async function readForAudit(cwd: string, path: string, isGitBinary: boolean): Promise<{ content: string } | { skip: SkipReason }> {
   if (isGitBinary) return { skip: "gitattributes-notext" };
   if (BINARY_EXTENSIONS.has(extname(path).toLowerCase())) return { skip: "binary-extension" };
-  const bytes = await readFile(join(cwd, path));
+  let bytes: Buffer;
+  try {
+    bytes = await readFile(join(cwd, path));
+  } catch (err) {
+    // The file was listed by `git ls-files` but is gone from the working tree (e.g. a tracked
+    // file deleted but not yet staged): recoverable — report it as skipped, do not abort.
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return { skip: "missing" };
+    throw err;
+  }
   if (bytes.includes(0)) return { skip: "binary-content" };
   try {
     // ignoreBOM keeps the BOM in the decoded string, as analyzeContent expects.
