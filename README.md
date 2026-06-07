@@ -142,12 +142,13 @@ indent_style = tab
 
 ---
 
-## Modes
+## Commands
 
 Every command prints at the end **which files it created or modified**.
 
 Each command takes the directory to process as an optional positional argument
 (`appease <command> [dir]`; defaults to the current directory).
+
 
 | Command | Reads | Writes | Destructive |
 |---|---|---|---|
@@ -273,3 +274,4 @@ TS calls and orchestrates the effects:
 - Exact format of the `audit` report (provisional today, documented above).
 - Binary detection and handling of files in encodings other than UTF-8.
 - Concrete `--tabs-*` switches.
+
