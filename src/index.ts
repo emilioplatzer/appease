@@ -2,19 +2,20 @@
 
 import { analyzeContent } from "./core/analyze.js";
 import { audit } from "./core/audit.js";
-import { defaultEditorconfig, defaultGitattributes, interpretConfigs } from "./core/configs.js";
+import { defaultEditorconfig, defaultGitattributes, defaultVscodeSettings, interpretConfigs } from "./core/configs.js";
 import { buildExceptions, mergeEditorconfig, mergeGitattributes } from "./core/merge.js";
 import type { AuditedFile } from "./core/merge.js";
 import { normalizeText } from "./core/normalize.js";
 import type { AuditResult, DeviationAxis, FormatReport, NormalizeOptions, ProjectConfig, ResolvedFileConfig, RunOptions, RunReport } from "./core/types.js";
-import { readRawConfigs, writeEditorconfig, writeGitattributes } from "./io/configs.js";
+import { readRawConfigs, writeEditorconfig, writeGitattributes, writeVscodeSettings } from "./io/configs.js";
 import { hasUncommittedChanges, listTrackedFiles, readForAudit, writeText } from "./io/files.js";
+import { parse, modify, applyEdits } from "jsonc-parser";
 
 export * from "./core/types.js";
 export { analyzeContent } from "./core/analyze.js";
 export { normalizeText } from "./core/normalize.js";
-export { interpretConfigs, defaultEditorconfig, defaultGitattributes } from "./core/configs.js";
-export { readRawConfigs, writeEditorconfig, writeGitattributes } from "./io/configs.js";
+export { interpretConfigs, defaultEditorconfig, defaultGitattributes, defaultVscodeSettings } from "./core/configs.js";
+export { readRawConfigs, writeEditorconfig, writeGitattributes, writeVscodeSettings } from "./io/configs.js";
 export { audit } from "./core/audit.js";
 
 /**
@@ -43,16 +44,69 @@ function toNativeEol(content: string): string {
   return normalizeText(content, { bom: "keep", eol: nativeEol(), trailing: "keep", finalNewline: "keep" });
 }
 
+/** Parse JSON with comments (JSONC) and trailing commas safely. */
+export function parseJsonc(text: string): Record<string, any> {
+  if (!text.trim()) return {};
+  const result = parse(text);
+  if (result === undefined) {
+    throw new Error("Failed to parse JSON settings file: content is not valid JSONC");
+  }
+  return result;
+}
+
+/** Merge default settings into an existing JSONC string, preserving all comments and other formatting. */
+export function mergeVscodeSettingsJsonc(text: string, defaults: Record<string, any>): { content: string; changed: boolean } {
+  const parsed = parseJsonc(text);
+  let content = text;
+  let changed = false;
+
+  for (const [key, value] of Object.entries(defaults)) {
+    if (parsed[key] === value) {
+      continue;
+    }
+    const edits = modify(content, [key], value, {
+      formattingOptions: { insertSpaces: true, tabSize: 2 }
+    });
+    content = applyEdits(content, edits);
+    changed = true;
+  }
+
+  return { content, changed };
+}
+
 /** Write the pure-default configs, creating only the ones that do not exist yet (never overwrites). */
 async function runAddConfigDefaults(options: RunOptions): Promise<RunReport> {
   const raw = await readRawConfigs(options.cwd);
   const created: string[] = [];
+  const modified: string[] = [];
   const unchanged: string[] = [];
+
   if (raw.editorconfig === null) created.push((await writeEditorconfig(options.cwd, toNativeEol(defaultEditorconfig()), options.dryRun)).path);
   else unchanged.push(".editorconfig");
+
   if (raw.gitattributes === null) created.push((await writeGitattributes(options.cwd, toNativeEol(defaultGitattributes()), options.dryRun)).path);
   else unchanged.push(".gitattributes");
-  return { mode: "add-config-defaults", dryRun: options.dryRun, created, modified: [], unchanged };
+
+  const defaults = defaultVscodeSettings();
+  if (raw.vscodeSettings === null) {
+    const formatted = toNativeEol(JSON.stringify(defaults, null, 2) + "\n");
+    const res = await writeVscodeSettings(options.cwd, formatted, options.dryRun);
+    created.push(res.path);
+  } else {
+    const { content, changed } = mergeVscodeSettingsJsonc(raw.vscodeSettings, defaults);
+    if (changed) {
+      const res = await writeVscodeSettings(options.cwd, toNativeEol(content), options.dryRun);
+      if (res.modified) {
+        modified.push(res.path);
+      } else {
+        unchanged.push(res.path);
+      }
+    } else {
+      unchanged.push(".vscode/settings.json");
+    }
+  }
+
+  return { mode: "add-config-defaults", dryRun: options.dryRun, created, modified, unchanged };
 }
 
 /** Discover tracked files, skip binaries/non-UTF-8, and analyze the rest. */

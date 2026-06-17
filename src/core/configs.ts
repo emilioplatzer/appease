@@ -62,3 +62,14 @@ export function defaultGitattributes(): string {
     "",
   ].join("\n");
 }
+
+/** Pure, idempotent defaults for `.vscode/settings.json`. */
+export function defaultVscodeSettings(): Record<string, any> {
+  return {
+    "editor.renderWhitespace": "selection",
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.encoding": "utf8"
+  };
+}
+

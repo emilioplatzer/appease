@@ -1,6 +1,7 @@
-import { readFile, stat, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import type { RawConfigs } from "../core/types.js";
+
 
 /** Outcome of a config write: whether the file was created, changed, or already up to date. */
 export interface WriteResult {
@@ -64,3 +65,19 @@ export function writeEditorconfig(cwd: string, content: string, dryRun: boolean)
 export function writeGitattributes(cwd: string, content: string, dryRun: boolean): Promise<WriteResult> {
   return writeConfig(cwd, ".gitattributes", content, dryRun);
 }
+
+/** Write `.vscode/settings.json` (created or updated only if it differs). */
+export async function writeVscodeSettings(cwd: string, content: string, dryRun: boolean): Promise<WriteResult> {
+  const relPath = join(".vscode", "settings.json");
+  // Normalize Windows backslashes to forward slashes for output consistency:
+  const normalizedPath = relPath.replace(/\\/g, "/");
+  const absolutePath = join(cwd, relPath);
+  const existing = await readOrNull(absolutePath);
+  if (existing === content) return { path: normalizedPath, created: false, modified: false };
+  if (!dryRun) {
+    await mkdir(dirname(absolutePath), { recursive: true });
+    await writeFile(absolutePath, content, "utf8");
+  }
+  return { path: normalizedPath, created: existing === null, modified: existing !== null };
+}
+
