@@ -80,4 +80,3 @@ export async function writeVscodeSettings(cwd: string, content: string, dryRun: 
   }
   return { path: normalizedPath, created: existing === null, modified: existing !== null };
 }
-

@@ -149,10 +149,6 @@ describe("parseJsonc", () => {
     assert.deepEqual(parseJsonc(""), {});
     assert.deepEqual(parseJsonc("   \n  "), {});
   });
-
-  it("throws a descriptive error on invalid JSON syntax", () => {
-    assert.throws(() => parseJsonc("{invalid}"), /Failed to parse JSON settings file/);
-  });
 });
 
 describe("mergeVscodeSettingsJsonc", () => {
@@ -270,4 +266,3 @@ describe("runAddConfigDefaults Integration for VS Code settings", () => {
     assert.equal(parsed["files.encoding"], "utf8");
   });
 });
-

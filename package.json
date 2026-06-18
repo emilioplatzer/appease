@@ -21,6 +21,7 @@
     "dist"
   ],
   "scripts": {
+    "start": "node dist/cli.js",
     "build": "tsc",
     "build:test": "tsc -p test/tsconfig.json",
     "pretest": "npm run build:test",

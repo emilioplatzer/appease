@@ -72,4 +72,3 @@ export function defaultVscodeSettings(): Record<string, any> {
     "files.encoding": "utf8"
   };
 }
-
