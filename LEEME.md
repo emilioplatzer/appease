@@ -12,7 +12,7 @@ Make peace in this app.
 [!--lang:*-->
 
 <!-- cucardas -->
-![designing](https://img.shields.io/badge/stability-designing-red.svg)
+![extending](https://img.shields.io/badge/stability-extending-orange.svg)
 [![npm-version](https://img.shields.io/npm/v/appease.svg)](https://npmjs.org/package/appease)
 [![downloads](https://img.shields.io/npm/dm/appease.svg)](https://npmjs.org/package/appease)
 [![build](https://github.com/emilioplatzer/appease/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/emilioplatzer/appease/actions/workflows/build-and-test.yml)
