@@ -26,6 +26,7 @@
     "build:test": "tsc -p test/tsconfig.json",
     "pretest": "npm run build:test",
     "test": "npm run && npm run build:test && mocha",
+    "test-ci": "c8 mocha",
     "precoverage": "npm run build:test",
     "coverage": "c8 mocha",
     "prepublishOnly": "npm run build"
@@ -42,11 +43,11 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "^25.9.2",
+    "@types/node": "^25.9.3",
     "@types/picomatch": "^4.0.3",
     "c8": "^11.0.0",
     "mocha": "^11.7.6",
-    "qa-control": "^0.6.12",
+    "qa-control": "^0.6.13",
     "typescript": "^6.0.3"
   },
   "qa-control": {
