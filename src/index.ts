@@ -74,6 +74,37 @@ export function mergeVscodeSettingsJsonc(text: string, defaults: Record<string, 
   return { content, changed };
 }
 
+/**
+ * Create the default `.vscode/settings.json` when absent, else merge the defaults into the existing
+ * file (preserving its comments and formatting). Records the outcome in the given buckets. Shared by
+ * `add-config-defaults` and `adapt-configs`.
+ */
+async function applyVscodeDefaults(
+  cwd: string,
+  rawVscodeSettings: string | null,
+  dryRun: boolean,
+  buckets: { created: string[]; modified: string[]; unchanged: string[] },
+): Promise<void> {
+  const defaults = defaultVscodeSettings();
+  if (rawVscodeSettings === null) {
+    const formatted = toNativeEol(JSON.stringify(defaults, null, 2) + "\n");
+    const res = await writeVscodeSettings(cwd, formatted, dryRun);
+    buckets.created.push(res.path);
+  } else {
+    const { content, changed } = mergeVscodeSettingsJsonc(rawVscodeSettings, defaults);
+    if (changed) {
+      const res = await writeVscodeSettings(cwd, toNativeEol(content), dryRun);
+      if (res.modified) {
+        buckets.modified.push(res.path);
+      } else {
+        buckets.unchanged.push(res.path);
+      }
+    } else {
+      buckets.unchanged.push(".vscode/settings.json");
+    }
+  }
+}
+
 /** Write the pure-default configs, creating only the ones that do not exist yet (never overwrites). */
 async function runAddConfigDefaults(options: RunOptions): Promise<RunReport> {
   const raw = await readRawConfigs(options.cwd);
@@ -87,24 +118,7 @@ async function runAddConfigDefaults(options: RunOptions): Promise<RunReport> {
   if (raw.gitattributes === null) created.push((await writeGitattributes(options.cwd, toNativeEol(defaultGitattributes()), options.dryRun)).path);
   else unchanged.push(".gitattributes");
 
-  const defaults = defaultVscodeSettings();
-  if (raw.vscodeSettings === null) {
-    const formatted = toNativeEol(JSON.stringify(defaults, null, 2) + "\n");
-    const res = await writeVscodeSettings(options.cwd, formatted, options.dryRun);
-    created.push(res.path);
-  } else {
-    const { content, changed } = mergeVscodeSettingsJsonc(raw.vscodeSettings, defaults);
-    if (changed) {
-      const res = await writeVscodeSettings(options.cwd, toNativeEol(content), options.dryRun);
-      if (res.modified) {
-        modified.push(res.path);
-      } else {
-        unchanged.push(res.path);
-      }
-    } else {
-      unchanged.push(".vscode/settings.json");
-    }
-  }
+  await applyVscodeDefaults(options.cwd, raw.vscodeSettings, options.dryRun, { created, modified, unchanged });
 
   return { mode: "add-config-defaults", dryRun: options.dryRun, created, modified, unchanged };
 }
@@ -156,6 +170,7 @@ async function runAdaptConfigs(options: RunOptions): Promise<RunReport> {
   const created = results.filter((r) => r.created).map((r) => r.path);
   const modified = results.filter((r) => !r.created && r.modified).map((r) => r.path);
   const unchanged = results.filter((r) => !r.created && !r.modified).map((r) => r.path);
+  await applyVscodeDefaults(options.cwd, raw.vscodeSettings, options.dryRun, { created, modified, unchanged });
   return { mode: "adapt-configs", dryRun: options.dryRun, created, modified, unchanged };
 }
 
