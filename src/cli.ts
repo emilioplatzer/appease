@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 // CLI entry point. Maps switches to the public API and orchestrates the effects.
 
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cli, command } from "cleye";
 import { runAppease } from "./index.js";
 import type { RunOptions } from "./core/types.js";
+
+/** Version string from the package's own package.json (sibling of `dist/`), shown in `--help` / `--version`. */
+const version: string = (JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version;
 
 /** `--dry-run`, shared by the commands that write to disk (not by `audit`, which never writes). */
 const dryRunFlag = {
@@ -21,6 +25,7 @@ export function parseArgs(argv?: string[]): RunOptions {
   const parsed = cli(
     {
       name: "appease",
+      version,
       help: { description: "Normalize a repo's text files to its .editorconfig / .gitattributes. One command is required." },
       commands: [
         command({ name: "audit", parameters: ["[dir]"], strictFlags: true, help: { description: "Report deviations only (no writes)" } }),
