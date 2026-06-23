@@ -47,7 +47,7 @@
     "@types/picomatch": "^4.0.3",
     "c8": "^11.0.0",
     "mocha": "^11.7.6",
-    "qa-control": "^0.6.13",
+    "qa-control": "^0.6.16",
     "typescript": "^6.0.3"
   },
   "qa-control": {
