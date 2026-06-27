@@ -141,7 +141,8 @@ async function runAudit(options: RunOptions): Promise<RunReport> {
   const warnings = (await hasUncommittedChanges(options.cwd))
     ? ["repository has uncommitted changes; the audit reflects the current working tree, not a committed state"]
     : [];
-  return { mode: "audit", dryRun: options.dryRun, created: [], modified: [], unchanged: [], audit: { findings: audit(reports, config, nativeEol()), notAnalyzed }, warnings };
+  const findings = audit(reports, config, nativeEol());
+  return { mode: "audit", dryRun: options.dryRun, created: [], modified: [], unchanged: [], audit: { findings, notAnalyzed, summary: { findings: findings.length, notAnalyzed: notAnalyzed.length } }, warnings };
 }
 
 /**

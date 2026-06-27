@@ -101,6 +101,8 @@ export interface AuditResult {
   findings: FileAudit[];
   /** Files not analyzed (binary / `-text` / non-UTF-8), with the reason. */
   notAnalyzed: { path: string; reason: "binary-extension" | "binary-content" | "gitattributes-notext" | "non-utf8" | "missing" }[];
+  /** Last property, for a glanceable count without scrolling past the lists above. Derived from `findings` / `notAnalyzed`. */
+  summary: { findings: number; notAnalyzed: number };
 }
 
 // ---------------------------------------------------------------------------
