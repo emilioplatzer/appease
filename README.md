@@ -4,11 +4,10 @@
 Make peace in this app.
 
 
-![extending](https://img.shields.io/badge/stability-extending-orange.svg)
 [![npm-version](https://img.shields.io/npm/v/appease.svg)](https://npmjs.org/package/appease)
 [![downloads](https://img.shields.io/npm/dm/appease.svg)](https://npmjs.org/package/appease)
-[![build](https://github.com/emilioplatzer/appease/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/emilioplatzer/appease/actions/workflows/build-and-test.yml)
-[![security](https://socket.dev/api/badge/npm/package/appease)](https://socket.dev/npm/package/appease)
+[![linux](https://github.com/emilioplatzer/appease/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/emilioplatzer/appease/actions/workflows/build-and-test.yml)
+[![windows](https://ci.appveyor.com/api/projects/status/github/emilioplatzer/appease?svg=true)](https://ci.appveyor.com/project/emilioplatzer/appease)
 [![qa-control](https://github.com/emilioplatzer/appease/actions/workflows/qa-control.yml/badge.svg)](https://github.com/emilioplatzer/appease/actions/workflows/qa-control.yml)
 
 
