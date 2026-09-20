@@ -26,7 +26,17 @@ export function parseArgs(argv?: string[]): RunOptions {
     {
       name: "appease",
       version,
-      help: { description: "Normalize a repo's text files to its .editorconfig / .gitattributes. One command is required." },
+      help: {
+        description: "Normalize a repo's text files to its .editorconfig / .gitattributes. One command is required.",
+        // Every command takes an optional [dir]; the root usage line does not show it, so the
+        // examples do (and show --dry-run, likewise invisible until a command's own --help).
+        examples: [
+          "appease audit",
+          "appease add-config-defaults ../other-repo --dry-run",
+          "appease adapt-configs ../other-repo",
+          "appease fix-format ../other-repo",
+        ],
+      },
       commands: [
         command({ name: "audit", parameters: ["[dir]"], strictFlags: true, help: { description: "Report deviations only (no writes)" } }),
         command({ name: "add-config-defaults", parameters: ["[dir]"], strictFlags: true, flags: dryRunFlag, help: { description: "Write pure-default configs (only the ones that do not exist yet)" } }),
