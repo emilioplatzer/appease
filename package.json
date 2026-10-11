@@ -20,14 +20,15 @@
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "start": "node dist/cli.js",
     "build": "tsc",
-    "build:test": "tsc -p test/tsconfig.json",
-    "test": "npm run build && npm run build:test && mocha",
-    "test-ci": "npm run build && npm run build:test && c8 mocha",
-    "coverage": "c8 mocha",
-    "prepublishOnly": "npm run build"
+    "test": "tsc -p test && mocha",
+    "test-ci": "tsc -p test && c8 mocha",
+    "coverage": "c8 mocha"
   },
   "overrides": {
     "brace-expansion": ">=5.0.9",
@@ -36,7 +37,7 @@
     "uuid": ">=14.0.0"
   },
   "dependencies": {
-    "cleye": "^2.7.0",
+    "commendatore": "^0.0.3",
     "jsonc-parser": "^3.3.1",
     "picomatch": "^4.0.7"
   },

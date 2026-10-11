@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 // CLI entry point. Maps switches to the public API and orchestrates the effects.
 
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { cli, command } from "cleye";
+import { cli, command, parseCommandLine, runMain } from "commendatore";
+import type { ExitCode } from "commendatore";
 import { runAppease } from "./index.js";
 import type { RunOptions } from "./core/types.js";
 
-/** Version string from the package's own package.json (sibling of `dist/`), shown in `--help` / `--version`. */
-const version: string = (JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version;
+const EXIT_CODES: ExitCode[] = [
+  { code: 0, description: "done" },
+  { code: 1, description: "no command given, or an error" },
+];
 
 /** `--dry-run`, shared by the commands that write to disk (not by `audit`, which never writes). */
 const dryRunFlag = {
@@ -17,41 +18,47 @@ const dryRunFlag = {
 } as const;
 
 /**
- * Parse argv into resolved RunOptions. cleye is the single source of truth: each RunMode is a
- * subcommand (`appease <command> [dir]`), so the modes are mutually exclusive by construction and
- * each gets its own `--help`. cleye prints usage and exits on unknown flags and on `--help`.
+ * Parse argv into resolved RunOptions, or null when no command was given (the help is shown).
+ * cleye is the single source of truth: each RunMode is a subcommand (`appease <command> [dir]`), so the
+ * modes are mutually exclusive by construction and each gets its own `--help`. cleye prints usage and
+ * exits on unknown flags and on `--help`. The version line is omitted for `audit`, whose output is JSON.
  */
-export function parseArgs(argv?: string[]): RunOptions {
-  const parsed = cli(
+export function parseArgs(argv: string[]): RunOptions | null {
+  const { parsed } = parseCommandLine(
     {
-      name: "appease",
-      version,
-      help: {
-        description: "Normalize a repo's text files to its .editorconfig / .gitattributes. One command is required.",
-        // Every command takes an optional [dir]; the root usage line does not show it, so the
-        // examples do (and show --dry-run, likewise invisible until a command's own --help).
-        examples: [
-          "appease audit",
-          "appease add-config-defaults ../other-repo --dry-run",
-          "appease adapt-configs ../other-repo",
-          "appease fix-format ../other-repo",
+      moduleUrl: import.meta.url,
+      description: "Normalize a repo's text files to its .editorconfig / .gitattributes. One command is required.",
+      // Every command takes an optional [dir]; the root usage line does not show it, so the
+      // examples do (and show --dry-run, likewise invisible until a command's own --help).
+      examples: [
+        "appease audit",
+        "appease add-config-defaults ../other-repo --dry-run",
+        "appease adapt-configs ../other-repo",
+        "appease fix-format ../other-repo",
+      ],
+      exitCodes: EXIT_CODES,
+      exitCodesHeading: "Exit codes:",
+    },
+    (base) => cli(
+      {
+        ...base,
+        commands: [
+          command({ name: "audit", parameters: ["[dir]"], strictFlags: true, help: { description: "Report deviations only (no writes)" } }),
+          command({ name: "add-config-defaults", parameters: ["[dir]"], strictFlags: true, flags: dryRunFlag, help: { description: "Write pure-default configs (only the ones that do not exist yet)" } }),
+          command({ name: "adapt-configs", parameters: ["[dir]"], strictFlags: true, flags: dryRunFlag, help: { description: "Write/adapt configs to reflect the repo's current reality" } }),
+          command({ name: "fix-format", parameters: ["[dir]"], strictFlags: true, flags: dryRunFlag, help: { description: "Normalize files (BOM / EOL / trailing whitespace / final newline)" } }),
         ],
       },
-      commands: [
-        command({ name: "audit", parameters: ["[dir]"], strictFlags: true, help: { description: "Report deviations only (no writes)" } }),
-        command({ name: "add-config-defaults", parameters: ["[dir]"], strictFlags: true, flags: dryRunFlag, help: { description: "Write pure-default configs (only the ones that do not exist yet)" } }),
-        command({ name: "adapt-configs", parameters: ["[dir]"], strictFlags: true, flags: dryRunFlag, help: { description: "Write/adapt configs to reflect the repo's current reality" } }),
-        command({ name: "fix-format", parameters: ["[dir]"], strictFlags: true, flags: dryRunFlag, help: { description: "Normalize files (BOM / EOL / trailing whitespace / final newline)" } }),
-      ],
-    },
-    undefined,
-    argv,
+      undefined,
+      argv,
+    ),
+    { show: (parsed) => parsed.command !== undefined && parsed.command !== "audit" },
   );
 
   if (parsed.command === undefined) {
     parsed.showHelp();
     process.stderr.write("\nSpecify a command: audit | add-config-defaults | adapt-configs | fix-format\n");
-    process.exit(1);
+    return null;
   }
   const dir = parsed._.dir;
   return {
@@ -67,7 +74,9 @@ function omitEmptyUnresolved(key: string, value: unknown): unknown {
 }
 
 export async function main(argv: string[]): Promise<number> {
-  const report = await runAppease(parseArgs(argv));
+  const options = parseArgs(argv);
+  if (options === null) return 1;
+  const report = await runAppease(options);
   for (const warning of report.warnings ?? []) process.stderr.write(`warning: ${warning}\n`);
   if (report.audit !== undefined) process.stdout.write(`${JSON.stringify(report.audit, omitEmptyUnresolved, 2)}\n`);
   for (const path of report.created) process.stdout.write(`${report.dryRun ? "would create" : "created"}: ${path}\n`);
@@ -77,12 +86,6 @@ export async function main(argv: string[]): Promise<number> {
 }
 
 // Only run when invoked directly (not when imported by tests).
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main(process.argv.slice(2)).then(
-    (code) => process.exit(code),
-    (err: unknown) => {
-      process.stderr.write(`${err instanceof Error ? err.stack ?? err.message : String(err)}\n`);
-      process.exit(1);
-    },
-  );
+if (import.meta.main) {
+  runMain(() => main(process.argv.slice(2)), 1);
 }

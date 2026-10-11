@@ -3,6 +3,7 @@
   "compilerOptions": {
     "rootDir": "..",
     "outDir": "../test-run",
+    "declaration": false,
     "types": ["node", "mocha"]
   },
   "include": ["../src/**/*.ts", "**/*.ts"]
