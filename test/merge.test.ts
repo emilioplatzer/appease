@@ -41,6 +41,11 @@ describe("buildExceptions", () => {
     assert.deepEqual(result.editorconfig, [{ pattern: "y.txt", properties: ["trim_trailing_whitespace = false"] }]);
   });
 
+  it("records no exception for repoEol (CRLF inside the repo is never a valid choice)", () => {
+    assert.deepEqual(buildExceptions([file("old.txt", ["repoEol"], { hasCrlf: true })]), { editorconfig: [], gitattributes: [] });
+    assert.deepEqual(buildExceptions([file("old.txt", ["trailing", "repoEol"], { hasCrlf: true })]).editorconfig, [{ pattern: "old.txt", properties: ["trim_trailing_whitespace = false"] }]);
+  });
+
   it("is empty for no files", () => {
     assert.deepEqual(buildExceptions([]), { editorconfig: [], gitattributes: [] });
   });

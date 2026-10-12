@@ -1,6 +1,9 @@
 // Strongly-typed contracts for appease (brand: "normalificador").
 // No `any`. Every type here is shared between the pure core and the orchestration (CLI).
 
+import type { Confirmation } from "commendatore";
+import type { AppeaseMessage } from "./errors.js";
+
 /** Final-newline state of a file. */
 export type FinalNewline = "present" | "missing" | "multiple";
 
@@ -83,8 +86,15 @@ export interface ProjectConfig {
 // Audit / evaluation.
 // ---------------------------------------------------------------------------
 
-/** Axis along which a file deviates from its resolved config. */
-export type DeviationAxis = "bom" | "eol" | "trailing" | "finalNewline";
+/**
+ * Axis along which a file deviates from its resolved config. `repoEol` is not about the working copy: a text
+ * file stored in the git index (what the next commit will contain) with CRLF. Git keeps CRLF in files already
+ * committed that way even under `text=auto`, so they must be renormalized once (`--fix-format` offers it).
+ */
+export type DeviationAxis = "bom" | "eol" | "trailing" | "finalNewline" | "repoEol";
+
+/** How git stores a tracked file in the index (`git ls-files --eol`, the `i/` column). `binary` = git sees it as `-text`. */
+export type IndexEol = "lf" | "crlf" | "mixed" | "none" | "binary";
 
 /** A single file's findings against the resolved config (only files with findings are listed). */
 export interface FileAudit {
@@ -118,7 +128,16 @@ export interface RunOptions {
   cwd: string;
   /** Simulate writes; report what would change but touch nothing. */
   dryRun: boolean;
+  /**
+   * `fix-format` only: decides, file by file, whether a file stored with CRLF in the git index is renormalized
+   * there (only its EOL is rewritten in the index; the working copy and any other change are left untouched).
+   * Absent = none is renormalized (`disabled`). The CLI builds it from `--renormalize-repo` (commendatore's confirmer).
+   */
+  confirmRenormalize?: (path: string) => Promise<Confirmation>;
 }
+
+/** Why a file stored with CRLF in the index was not renormalized (commendatore's confirmation reasons). */
+export type RenormalizeSkipReason = NonNullable<Confirmation["reason"]>;
 
 /** Outcome of a run: which files were created/modified, plus mode-specific payload. */
 export interface RunReport {
@@ -131,6 +150,10 @@ export interface RunReport {
   unchanged: string[];
   /** Present for `--audit`. */
   audit?: AuditResult;
+  /** `fix-format`: files renormalized in the git index (or that would be, under `--dry-run`). */
+  renormalized?: string[];
+  /** `fix-format`: files stored with CRLF in the git index that were not renormalized, and why. */
+  notRenormalized?: { path: string; reason: RenormalizeSkipReason }[];
   /** Non-fatal advisories (e.g. uncommitted changes during an audit). Printed to stderr. */
-  warnings?: string[];
+  warnings?: AppeaseMessage[];
 }

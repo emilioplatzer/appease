@@ -68,8 +68,10 @@ resolves it via its `core.eol`, whose default value (when unset) is already `nat
 environment requirement: it works as long as `core.eol` is not pinned to `lf`/`crlf`. You can
 verify it, without changing anything, with `git config --get core.eol`.
 
-When adopting or changing `.gitattributes`, already-committed files are not rewritten on
-their own; a one-time pass is needed: `git add --renormalize .`.
+When adopting or changing `.gitattributes`, the files already committed with CRLF **remain
+stored with CRLF inside the repo**, even if they are modified and committed again: under
+`text=auto` git does not convert a file that is already in the index with CRLF. `audit`
+reports them with the `repoEol` deviation and `fix-format` offers to renormalize them (see below).
 
 ### BOM / charset — handled by `.editorconfig`
 
@@ -148,13 +150,16 @@ Every command prints at the end **which files it created or modified**.
 Each command takes the directory to process as an optional positional argument
 (`appease <command> [dir]`; defaults to the current directory).
 
+The messages are shown in the language of `--lang` or, if absent, in the one of the environment
+(Spanish or English; any other, in English). The JSON of `audit` is not translated.
+
 
 | Command | Reads | Writes | Destructive |
 |---|---|---|---|
 | `audit` | existing configs (or the defaults it would propose) + the files | nothing, only **reports** what is out of spec | no |
 | `add-config-defaults` | — | the configs with **pure defaults** (without looking at reality) | no (only creates config) |
 | `adapt-configs` | configs + audit | creates or **adapts** the configs to reflect what was found | does not touch source code |
-| `fix-format` | configs | **modifies the files** (BOM, trailing, newline; EOL via Git) honoring the configs | yes (Git reverts) |
+| `fix-format` | configs + git index | **modifies the files** (BOM, EOL, trailing, newline) honoring the configs and, confirming file by file, **renormalizes in the git index** the ones stored with CRLF | yes (Git reverts) |
 
 ### `audit`: report format
 
@@ -173,6 +178,8 @@ evaluated are listed. A clean repo yields both lists empty:
 - **`findings`**: **analyzed files that deviate** from their resolved config. Each entry
   carries `path`, `deviations` (axes that differ from what the config asks for) and
   `unresolved` (axes governed by an unrecognized config value: not evaluated, reported as-is).
+  The axes are `bom`, `eol`, `trailing` and `finalNewline` (the working copy) and `repoEol`: the
+  file is stored with CRLF in the git index (what the next commit will contain).
 - **`notAnalyzed`**: files that were **not analyzed**, with their `reason`
   (`binary-extension`, `binary-content`, `gitattributes-notext`, `non-utf8`).
 
@@ -197,6 +204,28 @@ Behavior details:
   default. To keep a single property (rare) you edit the line instead of deleting it.
 - Each exception lands in the **file that owns the axis**: EOL → `.gitattributes`, the rest →
   `.editorconfig`. "Select all and delete" is per config file (two places).
+- The exception is `repoEol`: it is **never recorded**, because having CRLF inside the repo is
+  not a valid choice. After `adapt-configs`, `fix-format` still offers to renormalize those
+  files.
+
+### `fix-format`: renormalizing the git index
+
+Besides normalizing the working copy, `fix-format` renormalizes in the git index the text
+files stored there with CRLF (the `repoEol` deviation). It rewrites **only the line endings**
+of what is in the index: the working copy and any other uncommitted change of the file stay as
+they were. That line-ending change is left staged, to go with the next commit. Since it touches
+the index, it is confirmed file by file:
+
+
+| | |
+|---|---|
+| `appease fix-format` | asks `[y/N/a]` for each file (`a` = this one and all the following) |
+| `appease fix-format --renormalize-repo` | renormalizes all of them without asking |
+| `appease fix-format --renormalize-repo=false` | renormalizes none |
+| `appease fix-format --dry-run` | only lists them |
+
+Without a terminal (i.e. in CI) and without the flag there is nobody to ask: nothing is
+renormalized and each file is reported with `NOT RENORMALIZED`.
 
 ### `--tabs-*` (out of scope for now)
 
@@ -273,3 +302,4 @@ TS calls and orchestrates the effects:
 - Exact format of the `audit` report (provisional today, documented above).
 - Binary detection and handling of files in encodings other than UTF-8.
 - Concrete `--tabs-*` switches.
+

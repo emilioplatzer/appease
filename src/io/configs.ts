@@ -1,6 +1,7 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { RawConfigs } from "../core/types.js";
+import { AppeaseError } from "../core/errors.js";
 
 
 /** Outcome of a config write: whether the file was created, changed, or already up to date. */
@@ -31,10 +32,10 @@ export async function readRawConfigs(cwd: string): Promise<RawConfigs> {
   try {
     stats = await stat(cwd);
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") throw new Error(`Directory not found: ${cwd}`);
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") throw new AppeaseError("directoryNotFound1", cwd);
     throw err;
   }
-  if (!stats.isDirectory()) throw new Error(`Not a directory: ${cwd}`);
+  if (!stats.isDirectory()) throw new AppeaseError("notADirectory1", cwd);
 
   const [editorconfig, gitattributes, vscodeSettings] = await Promise.all([
     readOrNull(join(cwd, ".editorconfig")),

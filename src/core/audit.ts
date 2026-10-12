@@ -1,4 +1,13 @@
-import type { DeviationAxis, FileAudit, FormatReport, ProjectConfig, ResolvedFileConfig } from "./types.js";
+import type { DeviationAxis, FileAudit, FormatReport, IndexEol, ProjectConfig, ResolvedFileConfig } from "./types.js";
+
+/**
+ * Whether a file is stored in the git index with CRLF although the config says it is text: git keeps it
+ * that way (even under `text=auto`) until it is renormalized. Not evaluated when the EOL is unresolved or binary.
+ */
+export function needsRepoRenormalization(cfg: ResolvedFileConfig, indexEol: IndexEol | undefined): boolean {
+  if (cfg.unresolved.includes("eol") || cfg.eol === "binary") return false;
+  return indexEol === "crlf" || indexEol === "mixed";
+}
 
 /**
  * Evaluate a collection of per-file analyses against the resolved project
@@ -8,16 +17,18 @@ import type { DeviationAxis, FileAudit, FormatReport, ProjectConfig, ResolvedFil
  * `nativeEol` is this machine's native line ending (CRLF on Windows, LF
  * elsewhere); it is how `eol=auto` is evaluated, since under `text=auto` the
  * working copy is expected to be native. The pure core receives it as input.
+ * `indexEol` (optional) is how git stores the file in the index; it drives the `repoEol` deviation.
  */
 export function audit(
-  reports: { path: string; report: FormatReport }[],
+  reports: { path: string; report: FormatReport; indexEol?: IndexEol }[],
   config: ProjectConfig,
   nativeEol: "lf" | "crlf",
 ): FileAudit[] {
   const files: FileAudit[] = [];
-  for (const { path, report } of reports) {
+  for (const { path, report, indexEol } of reports) {
     const cfg = config.resolve(path);
     const deviations = fileDeviations(report, cfg, nativeEol);
+    if (needsRepoRenormalization(cfg, indexEol)) deviations.push("repoEol");
     if (deviations.length > 0 || cfg.unresolved.length > 0) files.push({ path, deviations, unresolved: cfg.unresolved });
   }
   return files;

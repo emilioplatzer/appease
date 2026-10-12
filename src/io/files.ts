@@ -1,8 +1,9 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { promisify } from "node:util";
-import type { AuditResult } from "../core/types.js";
+import type { AuditResult, IndexEol } from "../core/types.js";
+import { AppeaseError } from "../core/errors.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -21,6 +22,63 @@ const BINARY_EXTENSIONS = new Set([
 export async function listTrackedFiles(cwd: string): Promise<string[]> {
   const { stdout } = await execFileAsync("git", ["ls-files", "-z"], { cwd, maxBuffer: 64 * 1024 * 1024 });
   return stdout.split("\0").filter((path) => path !== "");
+}
+
+/** Map the `i/` value of `git ls-files --eol` (empty for gitlinks/symlinks) to an IndexEol. */
+function toIndexEol(value: string): IndexEol {
+  if (value === "lf" || value === "crlf" || value === "mixed" || value === "none") return value;
+  if (value === "-text") return "binary";
+  if (value === "") return "none";
+  throw new Error(`appease: unexpected index EOL "${value}" from git ls-files --eol`);
+}
+
+/** How git stores each tracked file in the index (`git ls-files --eol`). Read-only. */
+export async function listIndexEol(cwd: string): Promise<Map<string, IndexEol>> {
+  const { stdout } = await execFileAsync("git", ["ls-files", "--eol", "-z"], { cwd, maxBuffer: 64 * 1024 * 1024 });
+  const result = new Map<string, IndexEol>();
+  for (const entry of stdout.split("\0")) {
+    if (entry === "") continue;
+    const tab = entry.indexOf("\t");
+    const info = entry.slice(0, tab).trim().split(/\s+/)[0];
+    if (tab < 0 || info === undefined || !info.startsWith("i/")) throw new Error(`appease: unexpected line from git ls-files --eol: "${entry}"`);
+    result.set(entry.slice(tab + 1), toIndexEol(info.slice(2)));
+  }
+  return result;
+}
+
+/** Run git with `input` as its standard input; resolves with its standard output. */
+function gitWithInput(cwd: string, args: string[], input: Buffer): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("git", args, { cwd, stdio: ["pipe", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
+    child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) resolve(stdout);
+      else reject(new Error(`git ${args.join(" ")} failed (${String(code)}): ${stderr.trim()}`));
+    });
+    child.stdin.end(input);
+  });
+}
+
+/**
+ * Rewrite, only in the git index, the stored content of `path` with its CRLF converted to LF. Only the EOL
+ * change is staged: the working copy and any other (unstaged) change of the file are left untouched.
+ */
+export async function renormalizeIndexEol(cwd: string, path: string): Promise<void> {
+  const { stdout } = await execFileAsync("git", ["ls-files", "--stage", "-z", "--", path], { cwd });
+  const entries = stdout.split("\0").filter((entry) => entry !== "");
+  const fields = entries.length === 1 ? (entries[0] ?? "").split("\t")[0]?.split(" ") ?? [] : [];
+  const [mode, hash, stage] = fields;
+  if (fields.length !== 3 || mode === undefined || hash === undefined || stage !== "0") {
+    throw new AppeaseError("cannotRenormalize1", path);
+  }
+  const { stdout: blob } = await execFileAsync("git", ["cat-file", "blob", hash], { cwd, encoding: "buffer", maxBuffer: 64 * 1024 * 1024 });
+  const normalized = Buffer.from(blob.toString("latin1").replace(/\r\n/g, "\n"), "latin1");
+  const newHash = (await gitWithInput(cwd, ["hash-object", "-w", "--no-filters", "--stdin"], normalized)).trim();
+  await execFileAsync("git", ["update-index", "--cacheinfo", `${mode},${newHash},${path}`], { cwd });
 }
 
 /** Whether the working tree has uncommitted changes (modified, staged, or untracked). Read-only. */

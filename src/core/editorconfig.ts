@@ -1,4 +1,5 @@
 import picomatch from "picomatch";
+import { AppeaseError } from "./errors.js";
 
 /** Axes an `.editorconfig` can govern for us; an axis here means "skip + report" (case 2). */
 export type EditorconfigAxis = "bom" | "trailing" | "finalNewline";
@@ -38,13 +39,13 @@ export function parseEditorconfig(content: string): Editorconfig {
     const line = rawLine.trim();
     if (line === "" || line.startsWith("#") || line.startsWith(";")) return;
     if (line.startsWith("[")) {
-      if (!line.endsWith("]")) throw new Error(`Malformed .editorconfig line ${index + 1}: "${rawLine}"`);
+      if (!line.endsWith("]")) throw new AppeaseError("malformedEditorconfigLine1Content2", index + 1, rawLine);
       current = { matches: makeMatcher(line.slice(1, -1)), charset: undefined, trim: undefined, finalNewline: undefined };
       sections.push(current);
       return;
     }
     const eq = line.indexOf("=");
-    if (eq === -1) throw new Error(`Malformed .editorconfig line ${index + 1}: "${rawLine}"`);
+    if (eq === -1) throw new AppeaseError("malformedEditorconfigLine1Content2", index + 1, rawLine);
     const key = line.slice(0, eq).trim().toLowerCase();
     const value = line.slice(eq + 1).trim().toLowerCase();
     if (current === undefined) {

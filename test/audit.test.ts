@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
-import { audit } from "../src/core/audit.js";
-import type { DeviationAxis, FileAudit, FormatReport, ProjectConfig, ResolvedFileConfig } from "../src/core/types.js";
+import { audit, needsRepoRenormalization } from "../src/core/audit.js";
+import type { DeviationAxis, FileAudit, FormatReport, IndexEol, ProjectConfig, ResolvedFileConfig } from "../src/core/types.js";
 
 function report(over: Partial<FormatReport>): FormatReport {
   return { empty: false, hasBom: false, hasCrlf: false, hasLf: false, hasCr: false, hasTrailingSpaces: false, finalNewline: "present", ...over };
@@ -70,6 +70,28 @@ describe("audit", () => {
       assert.deepEqual(devs(report({ hasCrlf: true }), resolved({ eol: "auto" }), "lf"), ["eol"]);
       assert.deepEqual(devs(report({ hasLf: true }), resolved({ eol: "auto" }), "crlf"), ["eol"]);
       assert.deepEqual(devs(report({ hasCrlf: true }), resolved({ eol: "auto" }), "crlf"), []);
+    });
+  });
+
+  describe("EOL stored in the git index (repoEol)", () => {
+    function repoDevs(indexEol: IndexEol | undefined, cfg: ResolvedFileConfig): DeviationAxis[] {
+      const entry = indexEol === undefined ? { path: "f.txt", report: report({}) } : { path: "f.txt", report: report({}), indexEol };
+      return audit([entry], configOf(cfg), "lf")[0]?.deviations ?? [];
+    }
+    it("deviates when a text file is stored with CRLF (or mixed) in the index", () => {
+      assert.deepEqual(repoDevs("crlf", resolved({ eol: "auto" })), ["repoEol"]);
+      assert.deepEqual(repoDevs("mixed", resolved({ eol: "lf" })), ["repoEol"]);
+      assert.deepEqual(repoDevs("crlf", resolved({ eol: "crlf" })), ["repoEol"]);
+    });
+    it("does not deviate when the index has LF or no line endings, or when it is unknown", () => {
+      assert.deepEqual(repoDevs("lf", resolved({ eol: "auto" })), []);
+      assert.deepEqual(repoDevs("none", resolved({ eol: "auto" })), []);
+      assert.deepEqual(repoDevs(undefined, resolved({ eol: "auto" })), []);
+    });
+    it("is not evaluated for binary files or when the EOL is unresolved", () => {
+      assert.deepEqual(repoDevs("crlf", resolved({ eol: "binary" })), []);
+      assert.deepEqual(repoDevs("binary", resolved({ eol: "auto" })), []);
+      assert.equal(needsRepoRenormalization(resolved({ eol: "auto", unresolved: ["eol"] }), "crlf"), false);
     });
   });
 

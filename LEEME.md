@@ -136,12 +136,16 @@ environment requirement: it works as long as `core.eol` is not pinned to `lf`/`c
 verify it, without changing anything, with `git config --get core.eol`.
 
 [!--lang:es-->
-Al adoptar o cambiar el `.gitattributes`, los archivos ya commiteados no se reescriben solos;
-hace falta una pasada única: `git add --renormalize .`.
+Al adoptar o cambiar el `.gitattributes`, los archivos que ya estaban commiteados con CRLF
+**siguen guardados con CRLF dentro del repo**, aunque se los modifique y se vuelvan a commitear:
+con `text=auto` git no convierte un archivo que ya está en el índice con CRLF. `audit` los
+reporta con el desvío `repoEol` y `fix-format` ofrece renormalizarlos (ver más abajo).
 
 <!--lang:en--]
-When adopting or changing `.gitattributes`, already-committed files are not rewritten on
-their own; a one-time pass is needed: `git add --renormalize .`.
+When adopting or changing `.gitattributes`, the files already committed with CRLF **remain
+stored with CRLF inside the repo**, even if they are modified and committed again: under
+`text=auto` git does not convert a file that is already in the index with CRLF. `audit`
+reports them with the `repoEol` deviation and `fix-format` offers to renormalize them (see below).
 
 [!--lang:es-->
 ### BOM / charset — lo maneja `.editorconfig`
@@ -280,11 +284,17 @@ Todos los comandos imprimen al final **qué archivos crearon o modificaron**.
 Cada comando toma el directorio a procesar como argumento posicional opcional
 (`appease <comando> [dir]`; por defecto, el directorio actual).
 
+Los mensajes salen en el idioma de `--lang` o, si no está, en el del entorno (castellano o
+inglés; cualquier otro, en inglés). El JSON de `audit` no se traduce.
+
 <!--lang:en--]
 Every command prints at the end **which files it created or modified**.
 
 Each command takes the directory to process as an optional positional argument
 (`appease <command> [dir]`; defaults to the current directory).
+
+The messages are shown in the language of `--lang` or, if absent, in the one of the environment
+(Spanish or English; any other, in English). The JSON of `audit` is not translated.
 
 
 [!--lang:es-->
@@ -293,7 +303,7 @@ Each command takes the directory to process as an optional positional argument
 | `audit` | configs existentes (o los defaults que propondría) + los archivos | nada, solo **reporta** lo que está fuera de norma | no |
 | `add-config-defaults` | — | los configs con **defaults puros** (sin mirar la realidad) | no (solo crea config) |
 | `adapt-configs` | configs + audit | crea o **adapta** los configs para reflejar lo encontrado | no toca el código fuente |
-| `fix-format` | configs | **modifica los archivos** (BOM, trailing, newline; EOL vía Git) respetando los configs | sí (Git revierte) |
+| `fix-format` | configs + índice de git | **modifica los archivos** (BOM, EOL, trailing, newline) respetando los configs y, confirmando archivo por archivo, **renormaliza en el índice de git** los guardados con CRLF | sí (Git revierte) |
 
 <!--lang:en--]
 | Command | Reads | Writes | Destructive |
@@ -301,7 +311,7 @@ Each command takes the directory to process as an optional positional argument
 | `audit` | existing configs (or the defaults it would propose) + the files | nothing, only **reports** what is out of spec | no |
 | `add-config-defaults` | — | the configs with **pure defaults** (without looking at reality) | no (only creates config) |
 | `adapt-configs` | configs + audit | creates or **adapts** the configs to reflect what was found | does not touch source code |
-| `fix-format` | configs | **modifies the files** (BOM, trailing, newline; EOL via Git) honoring the configs | yes (Git reverts) |
+| `fix-format` | configs + git index | **modifies the files** (BOM, EOL, trailing, newline) honoring the configs and, confirming file by file, **renormalizes in the git index** the ones stored with CRLF | yes (Git reverts) |
 
 [!--lang:es-->
 ### `audit`: formato del reporte
@@ -332,6 +342,8 @@ evaluated are listed. A clean repo yields both lists empty:
 - **`findings`**: archivos **analizados que se desvían** de su config resuelta. Cada entrada
   trae `path`, `deviations` (ejes que difieren de lo que pide la config) y `unresolved` (ejes
   gobernados por un valor de config no reconocido: no se evalúan, se reportan como están).
+  Los ejes son `bom`, `eol`, `trailing` y `finalNewline` (la copia local) y `repoEol`: el
+  archivo está guardado con CRLF en el índice de git (lo que va a tener el próximo commit).
 - **`notAnalyzed`**: archivos que **no se analizaron**, con su `reason`
   (`binary-extension`, `binary-content`, `gitattributes-notext`, `non-utf8`).
 
@@ -339,6 +351,8 @@ evaluated are listed. A clean repo yields both lists empty:
 - **`findings`**: **analyzed files that deviate** from their resolved config. Each entry
   carries `path`, `deviations` (axes that differ from what the config asks for) and
   `unresolved` (axes governed by an unrecognized config value: not evaluated, reported as-is).
+  The axes are `bom`, `eol`, `trailing` and `finalNewline` (the working copy) and `repoEol`: the
+  file is stored with CRLF in the git index (what the next commit will contain).
 - **`notAnalyzed`**: files that were **not analyzed**, with their `reason`
   (`binary-extension`, `binary-content`, `gitattributes-notext`, `non-utf8`).
 
@@ -390,6 +404,9 @@ Behavior details:
   default. Para conservar una sola propiedad (raro) se edita la línea en vez de borrarla.
 - Cada excepción cae en el **archivo dueño del eje**: EOL → `.gitattributes`, el resto →
   `.editorconfig`. "Marcar todo y borrar" es por archivo de config (dos lugares).
+- La excepción es `repoEol`: **nunca se registra**, porque tener CRLF dentro del repo no es
+  una elección válida. Después de `adapt-configs`, `fix-format` igual ofrece renormalizar esos
+  archivos.
 
 <!--lang:en--]
 - A deviation can be **multi-axis** in a single file (CRLF + trailing + no final newline +
@@ -397,6 +414,46 @@ Behavior details:
   default. To keep a single property (rare) you edit the line instead of deleting it.
 - Each exception lands in the **file that owns the axis**: EOL → `.gitattributes`, the rest →
   `.editorconfig`. "Select all and delete" is per config file (two places).
+- The exception is `repoEol`: it is **never recorded**, because having CRLF inside the repo is
+  not a valid choice. After `adapt-configs`, `fix-format` still offers to renormalize those
+  files.
+
+[!--lang:es-->
+### `fix-format`: renormalizar el índice de git
+
+<!--lang:en--]
+### `fix-format`: renormalizing the git index
+
+[!--lang:es-->
+Además de normalizar la copia local, `fix-format` renormaliza en el índice de git los
+archivos de texto guardados ahí con CRLF (el desvío `repoEol`). Reescribe **solo el fin de
+línea** de lo que está en el índice: la copia local y cualquier otro cambio sin commitear del
+archivo quedan como estaban. Queda en _stage_ ese cambio de fin de línea, que se sube con el
+próximo commit. Como toca el índice, se confirma archivo por archivo:
+
+<!--lang:en--]
+Besides normalizing the working copy, `fix-format` renormalizes in the git index the text
+files stored there with CRLF (the `repoEol` deviation). It rewrites **only the line endings**
+of what is in the index: the working copy and any other uncommitted change of the file stay as
+they were. That line-ending change is left staged, to go with the next commit. Since it touches
+the index, it is confirmed file by file:
+
+[!--lang:*-->
+
+| | |
+|---|---|
+| `appease fix-format` | asks `[y/N/a]` for each file (`a` = this one and all the following) |
+| `appease fix-format --renormalize-repo` | renormalizes all of them without asking |
+| `appease fix-format --renormalize-repo=false` | renormalizes none |
+| `appease fix-format --dry-run` | only lists them |
+
+<!--lang:es-->
+Sin terminal (por ejemplo en CI) y sin el flag no hay a quién preguntar: no renormaliza e
+informa cada archivo con `NOT RENORMALIZED`.
+
+<!--lang:en--]
+Without a terminal (i.e. in CI) and without the flag there is nobody to ask: nothing is
+renormalized and each file is reported with `NOT RENORMALIZED`.
 
 [!--lang:es-->
 ### `--tabs-*` (fuera por ahora)

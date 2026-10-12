@@ -1,17 +1,22 @@
 // Public API for appease. Consumable from Node and exercised by the CLI and tests.
 
 import { analyzeContent } from "./core/analyze.js";
-import { audit } from "./core/audit.js";
+import { audit, needsRepoRenormalization } from "./core/audit.js";
 import { defaultEditorconfig, defaultGitattributes, defaultVscodeSettings, interpretConfigs } from "./core/configs.js";
 import { buildExceptions, mergeEditorconfig, mergeGitattributes } from "./core/merge.js";
 import type { AuditedFile } from "./core/merge.js";
 import { normalizeText } from "./core/normalize.js";
-import type { AuditResult, DeviationAxis, FormatReport, NormalizeOptions, ProjectConfig, ResolvedFileConfig, RunOptions, RunReport } from "./core/types.js";
+import { AppeaseError } from "./core/errors.js";
+import type { AppeaseMessage } from "./core/errors.js";
+import type { AuditResult, DeviationAxis, FormatReport, IndexEol, NormalizeOptions, ProjectConfig, RenormalizeSkipReason, ResolvedFileConfig, RunOptions, RunReport } from "./core/types.js";
 import { readRawConfigs, writeEditorconfig, writeGitattributes, writeVscodeSettings } from "./io/configs.js";
-import { hasUncommittedChanges, listTrackedFiles, readForAudit, writeText } from "./io/files.js";
+import { hasUncommittedChanges, listIndexEol, listTrackedFiles, readForAudit, renormalizeIndexEol, writeText } from "./io/files.js";
 import { parse, modify, applyEdits } from "jsonc-parser";
 
 export * from "./core/types.js";
+export { AppeaseError } from "./core/errors.js";
+export type { AppeaseMessage } from "./core/errors.js";
+export { messages, i18n } from "./messages.js";
 export { analyzeContent } from "./core/analyze.js";
 export { normalizeText } from "./core/normalize.js";
 export { interpretConfigs, defaultEditorconfig, defaultGitattributes, defaultVscodeSettings } from "./core/configs.js";
@@ -23,7 +28,8 @@ export { audit } from "./core/audit.js";
  * - `audit`               : report deviations only (no writes).
  * - `add-config-defaults` : write pure-default configs (no inspection).
  * - `adapt-configs`       : write/adapt configs to reflect the repo's reality.
- * - `fix-format`          : normalize files (BOM/trailing/newline; EOL via Git).
+ * - `fix-format`          : normalize files (BOM/EOL/trailing/newline) and, confirming file by file,
+ *                           renormalize in the git index the text files stored there with CRLF.
  *
  * Orchestrates the effects (git ls-files, file I/O) around the pure core.
  */
@@ -49,7 +55,7 @@ export function parseJsonc(text: string): Record<string, any> {
   if (!text.trim()) return {};
   const result = parse(text);
   if (result === undefined) {
-    throw new Error("Failed to parse JSON settings file: content is not valid JSONC");
+    throw new AppeaseError("invalidVscodeSettings");
   }
   return result;
 }
@@ -123,14 +129,18 @@ async function runAddConfigDefaults(options: RunOptions): Promise<RunReport> {
   return { mode: "add-config-defaults", dryRun: options.dryRun, created, modified, unchanged };
 }
 
-/** Discover tracked files, skip binaries/non-UTF-8, and analyze the rest. */
-async function collectReports(cwd: string, config: ProjectConfig): Promise<{ reports: { path: string; report: FormatReport }[]; notAnalyzed: AuditResult["notAnalyzed"] }> {
-  const reports: { path: string; report: FormatReport }[] = [];
+/** Discover tracked files, skip binaries/non-UTF-8, and analyze the rest (with how git stores each one). */
+async function collectReports(cwd: string, config: ProjectConfig): Promise<{ reports: { path: string; report: FormatReport; indexEol?: IndexEol }[]; notAnalyzed: AuditResult["notAnalyzed"] }> {
+  const reports: { path: string; report: FormatReport; indexEol?: IndexEol }[] = [];
   const notAnalyzed: AuditResult["notAnalyzed"] = [];
+  const indexEols = await listIndexEol(cwd);
   for (const path of await listTrackedFiles(cwd)) {
     const read = await readForAudit(cwd, path, config.resolve(path).eol === "binary");
     if ("skip" in read) notAnalyzed.push({ path, reason: read.skip });
-    else reports.push({ path, report: analyzeContent(read.content) });
+    else {
+      const indexEol = indexEols.get(path);
+      reports.push(indexEol === undefined ? { path, report: analyzeContent(read.content) } : { path, report: analyzeContent(read.content), indexEol });
+    }
   }
   return { reports, notAnalyzed };
 }
@@ -138,9 +148,7 @@ async function collectReports(cwd: string, config: ProjectConfig): Promise<{ rep
 async function runAudit(options: RunOptions): Promise<RunReport> {
   const config = interpretConfigs(await readRawConfigs(options.cwd));
   const { reports, notAnalyzed } = await collectReports(options.cwd, config);
-  const warnings = (await hasUncommittedChanges(options.cwd))
-    ? ["repository has uncommitted changes; the audit reflects the current working tree, not a committed state"]
-    : [];
+  const warnings: AppeaseMessage[] = (await hasUncommittedChanges(options.cwd)) ? [{ key: "uncommittedChanges", params: [] }] : [];
   const findings = audit(reports, config, nativeEol());
   return { mode: "audit", dryRun: options.dryRun, created: [], modified: [], unchanged: [], audit: { findings, notAnalyzed, summary: { findings: findings.length, notAnalyzed: notAnalyzed.length } }, warnings };
 }
@@ -179,11 +187,15 @@ async function runAdaptConfigs(options: RunOptions): Promise<RunReport> {
  * Normalize each tracked file's content (BOM / EOL / trailing / final newline) per its resolved
  * config, skipping axes the config could not resolve (case 2). EOL is written directly into the
  * working tree (`eol=auto` resolves to this machine's native ending), matching what `--audit` checks.
+ * Then the text files stored with CRLF in the git index (the `repoEol` deviation) are renormalized there,
+ * each one only if `options.confirmRenormalize` confirms it (under `--dry-run` they are only listed).
  */
 async function runFixFormat(options: RunOptions): Promise<RunReport> {
   const config = interpretConfigs(await readRawConfigs(options.cwd));
   const native = nativeEol();
   const modified: string[] = [];
+  const indexEols = await listIndexEol(options.cwd);
+  const toRenormalize: string[] = [];
   for (const path of await listTrackedFiles(options.cwd)) {
     const resolved = config.resolve(path);
     const read = await readForAudit(options.cwd, path, resolved.eol === "binary");
@@ -193,8 +205,24 @@ async function runFixFormat(options: RunOptions): Promise<RunReport> {
       if (!options.dryRun) await writeText(options.cwd, path, normalized);
       modified.push(path);
     }
+    if (needsRepoRenormalization(resolved, indexEols.get(path))) toRenormalize.push(path);
   }
-  return { mode: "fix-format", dryRun: options.dryRun, created: [], modified, unchanged: [] };
+  const renormalized: string[] = [];
+  const notRenormalized: { path: string; reason: RenormalizeSkipReason }[] = [];
+  for (const path of toRenormalize) {
+    if (options.dryRun) {
+      renormalized.push(path);
+      continue;
+    }
+    const confirmation = options.confirmRenormalize === undefined ? { confirmed: false, reason: "disabled" as const } : await options.confirmRenormalize(path);
+    if (confirmation.confirmed) {
+      await renormalizeIndexEol(options.cwd, path);
+      renormalized.push(path);
+    } else {
+      notRenormalized.push({ path, reason: confirmation.reason ?? "declined" });
+    }
+  }
+  return { mode: "fix-format", dryRun: options.dryRun, created: [], modified, unchanged: [], renormalized, notRenormalized };
 }
 
 /** Map a resolved config to normalizer options: skip case-2 axes; resolve `eol=auto` to native. */

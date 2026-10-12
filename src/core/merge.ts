@@ -62,8 +62,9 @@ function eolAttrs(report: FormatReport): string {
   return "-text"; // mixed or lone CR: no clean eol=, lock byte-for-byte
 }
 
+/** `eol` goes to `.gitattributes`; `repoEol` is never recorded (CRLF inside the repo is not a valid choice). */
 function isEditorconfigAxis(axis: DeviationAxis): axis is "bom" | "trailing" | "finalNewline" {
-  return axis !== "eol";
+  return axis !== "eol" && axis !== "repoEol";
 }
 
 /**

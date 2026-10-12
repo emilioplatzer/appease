@@ -1,4 +1,5 @@
 import picomatch from "picomatch";
+import { AppeaseError } from "./errors.js";
 
 /**
  * EOL stance for a path as declared by `.gitattributes`.
@@ -34,7 +35,7 @@ export function parseGitattributes(content: string): Gitattributes {
     let text: GitRule["text"];
     let eol: GitRule["eol"];
     for (const attr of attrs) {
-      if (attr.startsWith("=")) throw new Error(`Malformed .gitattributes line ${index + 1}: "${rawLine}"`);
+      if (attr.startsWith("=")) throw new AppeaseError("malformedGitattributesLine1Content2", index + 1, rawLine);
       if (attr === "text") text = "set";
       else if (attr === "-text" || attr === "binary") text = "unset"; // binary macro = -text -diff
       else if (attr === "!text") text = undefined; // unset the attribute: no effect

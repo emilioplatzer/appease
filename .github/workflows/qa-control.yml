@@ -15,4 +15,4 @@ permissions:
 
 jobs:
   qa:
-    uses: codenautas/.github/.github/workflows/qa-control.yaml@v2
+    uses: codenautas/.github/.github/workflows/qa-control.yaml@v3

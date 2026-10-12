@@ -1,5 +1,8 @@
 import { strict as assert } from "node:assert";
+import { translator } from "commendatore";
 import { parseEditorconfig, resolveEditorconfig } from "../src/core/editorconfig.js";
+import { AppeaseError } from "../src/core/errors.js";
+import { i18n } from "../src/messages.js";
 
 /** Parse then resolve, the common path. */
 function resolve(content: string, path: string) {
@@ -81,6 +84,15 @@ describe("editorconfig", () => {
     });
     it("a line that is neither comment, section, nor key=value", () => {
       assert.throws(() => parseEditorconfig("[*]\ngarbage line"), /Malformed \.editorconfig line 2/);
+    });
+    it("is an AppeaseError with the message key and its parameters, so it can be shown in the user's language", () => {
+      assert.throws(() => parseEditorconfig("[*]\ngarbage line"), (err: unknown) => {
+        assert.ok(err instanceof AppeaseError);
+        assert.equal(err.key, "malformedEditorconfigLine1Content2");
+        assert.deepEqual(err.params, [2, "garbage line"]);
+        assert.equal(translator(i18n, "es")(err.key, ...err.params), 'Línea 2 mal formada en .editorconfig: "garbage line"');
+        return true;
+      });
     });
   });
 
