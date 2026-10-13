@@ -3,19 +3,10 @@
 
 import { resolve } from "node:path";
 import { cli, command, createConfirmer, parseCommandLine, runMain, translator } from "commendatore";
-import type { ExitCode } from "commendatore";
 import { AppeaseError, runAppease } from "./index.js";
 import type { RenormalizeSkipReason, RunOptions } from "./core/types.js";
 import { i18n } from "./messages.js";
 import type { MessageKey } from "./messages.js";
-
-function exitCodes(lang: string): ExitCode[] {
-  const message = translator(i18n, lang);
-  return [
-    { code: 0, description: message("exitCodeDone") },
-    { code: 1, description: message("exitCodeError") },
-  ];
-}
 
 const NOT_RENORMALIZED_REASON: Record<RenormalizeSkipReason, MessageKey> = {
   declined: "answeredNo",
@@ -44,7 +35,6 @@ export function parseArgs(argv: string[]): { options: RunOptions | null; message
         "appease adapt-configs ../other-repo",
         "appease fix-format ../other-repo",
       ],
-      exitCodes,
       argv,
     },
     (base, argv, lang) => {

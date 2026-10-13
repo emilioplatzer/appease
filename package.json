@@ -37,7 +37,7 @@
     "uuid": ">=14.0.0"
   },
   "dependencies": {
-    "commendatore": "^0.0.5",
+    "commendatore": "^0.0.6",
     "jsonc-parser": "^3.3.1",
     "picomatch": "^4.0.7"
   },

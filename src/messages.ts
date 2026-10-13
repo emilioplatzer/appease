@@ -1,13 +1,11 @@
 import type { I18n } from "commendatore";
 
 export const messages = {
-  appeaseDescription: "Normalize a repo's text files to its .editorconfig / .gitattributes. One command is required.",
-  exitCodeDone: "done",
-  exitCodeError: "no command given, or an error",
-  auditHelp: "Report deviations only (no writes)",
-  addConfigDefaultsHelp: "Write pure-default configs (only the ones that do not exist yet)",
-  adaptConfigsHelp: "Write/adapt configs to reflect the repo's current reality",
-  fixFormatHelp: "Normalize files (BOM / EOL / trailing whitespace / final newline) and renormalize the git index",
+  appeaseDescription: "Tool that normalizes the text files of a repository regarding line endings (trailing whitespace, CR/LF line terminators and final newline) and their coordination with the configuration files .editorconfig, .gitattributes and .vscode/settings.json",
+  auditHelp: "Prepares the report of deviations from the configuration files or from the default values",
+  addConfigDefaultsHelp: "Creates the missing configuration files with the default values, and adds to .vscode/settings.json the default values it lacks",
+  adaptConfigsHelp: "Adapts the configuration files, recording as an exception each of the deviations detectable by an audit. If any of the files does not exist, it creates it.",
+  fixFormatHelp: "Normalizes the files so they match the configuration files (respecting BOM and line endings). It also checks the repository and renormalizes the git index if needed.",
   dryRunHelp: "Simulate writes; report what would change but touch nothing",
   renormalizeRepoHelp: "Renormalize in the git index the text files stored there with CRLF (=false: none; absent: ask for each one)",
   created1: "created: $1",
@@ -39,13 +37,11 @@ export const i18n: I18n<typeof messages> = {
   messages: {
     en: messages,
     es: {
-      appeaseDescription: "Normaliza los archivos de texto de un repo según su .editorconfig / .gitattributes. Requiere un comando.",
-      exitCodeDone: "terminó",
-      exitCodeError: "no se indicó un comando, o hubo un error",
-      auditHelp: "Solo reporta los desvíos (no escribe nada)",
-      addConfigDefaultsHelp: "Escribe los configs por omisión (solo los que todavía no existen)",
-      adaptConfigsHelp: "Escribe o adapta los configs para reflejar el estado actual del repo",
-      fixFormatHelp: "Normaliza los archivos (BOM / fin de línea / espacios al final / salto de línea final) y renormaliza el índice de git",
+      appeaseDescription: "Herramienta que normaliza los archivos de texto de un repositorio en relación a los fines de línea (espacios en blanco al final, caracteres de terminación CR/LF y última línea en blanco) y su coordinación con los archivos de configuración .editorconfig, .gitattributes y .vscode/settings.json",
+      auditHelp: "Prepara el informe de desvíos respecto de los archivos de configuración o de los valores predeterminados",
+      addConfigDefaultsHelp: "Crea con los valores predeterminados los archivos de configuración que no existen, y agrega a .vscode/settings.json los valores predeterminados que le falten",
+      adaptConfigsHelp: "Adapta los archivos de configuración anotando como excepción cada uno de los desvíos detectables en un audit. Si alguno de los archivos no existe, lo crea.",
+      fixFormatHelp: "Normaliza los archivos de modo que coincidan con los archivos de configuración (respetando BOM y fines de línea). También revisa el repositorio y renormaliza el índice de git si es necesario.",
       dryRunHelp: "Simula las escrituras; informa qué cambiaría sin tocar nada",
       renormalizeRepoHelp: "Renormaliza en el índice de git los archivos de texto guardados ahí con CRLF (=false: ninguno; sin el flag: pregunta por cada uno)",
       created1: "creado: $1",
