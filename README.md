@@ -151,7 +151,7 @@ Each command takes the directory to process as an optional positional argument
 (`appease <command> [dir]`; defaults to the current directory).
 
 The messages are shown in the language of `--lang` or, if absent, in the one of the environment
-(Spanish or English; any other, in English). The JSON of `audit` is not translated.
+(Spanish or English; any other, in English). The JSON of `audit --json` is not translated.
 
 
 | Command | Reads | Writes | Destructive |
@@ -163,28 +163,57 @@ The messages are shown in the language of `--lang` or, if absent, in the one of 
 
 ### `audit`: report format
 
-`audit` prints canonical JSON with **two** lists. The key point is that conforming files
-**appear in neither**: only the ones that need attention and the ones that couldn't be
-evaluated are listed. A clean repo yields both lists empty:
+`audit` reports **two** lists. The key point is that conforming files **appear in
+neither**: only the ones that need attention and the ones that couldn't be evaluated are
+listed.
+
+- **findings** (`findings` in the JSON): **analyzed files that deviate** from their resolved config. Each
+  one carries its `deviations` (axes that differ from what the config asks for) and its
+  `unresolved` (axes governed by an unrecognized config value: not evaluated, reported as-is).
+  The axes are `bom`, `eol`, `trailing` and `finalNewline` (the working copy) and `repoEol`: the
+  file is stored with CRLF in the git index (what the next commit will contain).
+- **not analyzed** (`notAnalyzed` in the JSON): files that were **not analyzed**, with their reason
+  (`binary-extension`, `binary-content`, `gitattributes-notext`, `non-utf8`, `missing`).
+
+By default the report is **compact text, one file per line**, meant for reading (not for
+parsing). Empty sections and parts are omitted; the last line has the totals (a clean repo
+prints only that line). The headings are translated; the axes and reasons are not. A path
+is double-quoted (with JSON-style escapes) if it has whitespace, control characters, `"`,
+`;` or `:`.
+
+
+```
+appease v0.3.1
+findings:
+  .eslintrc.yml; deviations: repoEol, eol; unresolved: bom
+  "docs/my file.md"; deviations: trailing
+not analyzed:
+  img/logo.png: binary-extension
+2 findings, 1 not analyzed
+```
+
+With **`--json`** it prints the JSON (without the version line, which goes inside, and not
+translated), for whoever needs to process the data. `unresolved` is omitted when empty and
+`summary` (the totals) goes last:
 
 
 ```json
 {
-  "findings": [],
-  "notAnalyzed": []
+  "appease": "0.3.1",
+  "report": "audit",
+  "findings": [
+    { "path": ".eslintrc.yml", "deviations": ["repoEol", "eol"], "unresolved": ["bom"] }
+  ],
+  "notAnalyzed": [
+    { "path": "img/logo.png", "reason": "binary-extension" }
+  ],
+  "summary": { "findings": 1, "notAnalyzed": 1 }
 }
 ```
 
-- **`findings`**: **analyzed files that deviate** from their resolved config. Each entry
-  carries `path`, `deviations` (axes that differ from what the config asks for) and
-  `unresolved` (axes governed by an unrecognized config value: not evaluated, reported as-is).
-  The axes are `bom`, `eol`, `trailing` and `finalNewline` (the working copy) and `repoEol`: the
-  file is stored with CRLF in the git index (what the next commit will contain).
-- **`notAnalyzed`**: files that were **not analyzed**, with their `reason`
-  (`binary-extension`, `binary-content`, `gitattributes-notext`, `non-utf8`).
-
-This format is **provisional**: today the output is the direct serialization of the
-`AuditResult` type, meant to be easy to parse and test. It may grow if the value justifies it.
+This format is **provisional**: today the JSON is the direct serialization of the
+`AuditResult` type (headed by the version and the kind of report), meant to be easy to parse
+and test. It may grow if the value justifies it.
 
 ### `adapt-configs`: records every deviation as an exception
 
@@ -302,4 +331,3 @@ TS calls and orchestrates the effects:
 - Exact format of the `audit` report (provisional today, documented above).
 - Binary detection and handling of files in encodings other than UTF-8.
 - Concrete `--tabs-*` switches.
-

@@ -105,7 +105,7 @@ export interface FileAudit {
   unresolved: DeviationAxis[];
 }
 
-/** Full audit result. `--audit` prints this as canonical JSON. */
+/** Full audit result. `audit` prints it as compact text, or as JSON with `--json`. */
 export interface AuditResult {
   /** Analyzed files that deviate from their resolved config (conforming files are omitted). */
   findings: FileAudit[];

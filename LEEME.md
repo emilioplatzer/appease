@@ -285,7 +285,7 @@ Cada comando toma el directorio a procesar como argumento posicional opcional
 (`appease <comando> [dir]`; por defecto, el directorio actual).
 
 Los mensajes salen en el idioma de `--lang` o, si no está, en el del entorno (castellano o
-inglés; cualquier otro, en inglés). El JSON de `audit` no se traduce.
+inglés; cualquier otro, en inglés). El JSON de `audit --json` no se traduce.
 
 <!--lang:en--]
 Every command prints at the end **which files it created or modified**.
@@ -294,7 +294,7 @@ Each command takes the directory to process as an optional positional argument
 (`appease <command> [dir]`; defaults to the current directory).
 
 The messages are shown in the language of `--lang` or, if absent, in the one of the environment
-(Spanish or English; any other, in English). The JSON of `audit` is not translated.
+(Spanish or English; any other, in English). The JSON of `audit --json` is not translated.
 
 
 [!--lang:es-->
@@ -320,49 +320,102 @@ The messages are shown in the language of `--lang` or, if absent, in the one of 
 ### `audit`: report format
 
 [!--lang:es-->
-`audit` imprime un JSON canónico con **dos** listas. La clave es que los archivos
-**conformes no aparecen en ninguna**: solo se listan los que requieren atención y los que no
-se pudieron evaluar. Un repo limpio da ambas listas vacías:
+`audit` informa **dos** listas. La clave es que los archivos **conformes no aparecen en
+ninguna**: solo se listan los que requieren atención y los que no se pudieron evaluar.
+
+- **hallazgos** (`findings` en el JSON): archivos **analizados que se desvían** de su config resuelta.
+  Cada uno trae sus `deviations` (ejes que difieren de lo que pide la config) y sus
+  `unresolved` (ejes gobernados por un valor de config no reconocido: no se evalúan, se
+  reportan como están). Los ejes son `bom`, `eol`, `trailing` y `finalNewline` (la copia
+  local) y `repoEol`: el archivo está guardado con CRLF en el índice de git (lo que va a tener
+  el próximo commit).
+- **no analizados** (`notAnalyzed` en el JSON): archivos que **no se analizaron**, con su motivo
+  (`binary-extension`, `binary-content`, `gitattributes-notext`, `non-utf8`, `missing`).
+
+Por defecto el informe es **texto compacto, un archivo por línea**, pensado para leer (no
+para parsear). Las secciones y las partes vacías se omiten; la última línea tiene los totales
+(un repo limpio imprime solo esa línea). Los títulos se traducen; los ejes y los motivos no.
+Una ruta va entre comillas dobles (con escapes como en JSON) si tiene espacios, caracteres de
+control, `"`, `;` o `:`.
 
 <!--lang:en--]
-`audit` prints canonical JSON with **two** lists. The key point is that conforming files
-**appear in neither**: only the ones that need attention and the ones that couldn't be
-evaluated are listed. A clean repo yields both lists empty:
+`audit` reports **two** lists. The key point is that conforming files **appear in
+neither**: only the ones that need attention and the ones that couldn't be evaluated are
+listed.
+
+- **findings** (`findings` in the JSON): **analyzed files that deviate** from their resolved config. Each
+  one carries its `deviations` (axes that differ from what the config asks for) and its
+  `unresolved` (axes governed by an unrecognized config value: not evaluated, reported as-is).
+  The axes are `bom`, `eol`, `trailing` and `finalNewline` (the working copy) and `repoEol`: the
+  file is stored with CRLF in the git index (what the next commit will contain).
+- **not analyzed** (`notAnalyzed` in the JSON): files that were **not analyzed**, with their reason
+  (`binary-extension`, `binary-content`, `gitattributes-notext`, `non-utf8`, `missing`).
+
+By default the report is **compact text, one file per line**, meant for reading (not for
+parsing). Empty sections and parts are omitted; the last line has the totals (a clean repo
+prints only that line). The headings are translated; the axes and reasons are not. A path
+is double-quoted (with JSON-style escapes) if it has whitespace, control characters, `"`,
+`;` or `:`.
+
+[!--lang:es-->
+
+```
+appease v0.3.1
+hallazgos:
+  .eslintrc.yml; desvíos: repoEol, eol; sin resolver: bom
+  "docs/mi archivo.md"; desvíos: trailing
+no analizados:
+  img/logo.png: binary-extension
+2 hallazgos, 1 no analizados
+```
+
+<!--lang:en--]
+
+```
+appease v0.3.1
+findings:
+  .eslintrc.yml; deviations: repoEol, eol; unresolved: bom
+  "docs/my file.md"; deviations: trailing
+not analyzed:
+  img/logo.png: binary-extension
+2 findings, 1 not analyzed
+```
+
+[!--lang:es-->
+Con **`--json`** imprime el JSON (sin la línea de versión, que va adentro, y sin traducir),
+para quien necesite procesar los datos. `unresolved` se omite cuando está vacío y `summary`
+(los totales) va al final:
+
+<!--lang:en--]
+With **`--json`** it prints the JSON (without the version line, which goes inside, and not
+translated), for whoever needs to process the data. `unresolved` is omitted when empty and
+`summary` (the totals) goes last:
 
 [!--lang:*-->
 
 ```json
 {
-  "findings": [],
-  "notAnalyzed": []
+  "appease": "0.3.1",
+  "report": "audit",
+  "findings": [
+    { "path": ".eslintrc.yml", "deviations": ["repoEol", "eol"], "unresolved": ["bom"] }
+  ],
+  "notAnalyzed": [
+    { "path": "img/logo.png", "reason": "binary-extension" }
+  ],
+  "summary": { "findings": 1, "notAnalyzed": 1 }
 }
 ```
 
 <!--lang:es-->
-- **`findings`**: archivos **analizados que se desvían** de su config resuelta. Cada entrada
-  trae `path`, `deviations` (ejes que difieren de lo que pide la config) y `unresolved` (ejes
-  gobernados por un valor de config no reconocido: no se evalúan, se reportan como están).
-  Los ejes son `bom`, `eol`, `trailing` y `finalNewline` (la copia local) y `repoEol`: el
-  archivo está guardado con CRLF en el índice de git (lo que va a tener el próximo commit).
-- **`notAnalyzed`**: archivos que **no se analizaron**, con su `reason`
-  (`binary-extension`, `binary-content`, `gitattributes-notext`, `non-utf8`).
+Este formato es **provisional**: hoy el JSON es la serialización directa del tipo
+`AuditResult` (precedida por la versión y el tipo de informe), pensada para parsear y testear
+fácil. Puede crecer si el valor lo justifica.
 
 <!--lang:en--]
-- **`findings`**: **analyzed files that deviate** from their resolved config. Each entry
-  carries `path`, `deviations` (axes that differ from what the config asks for) and
-  `unresolved` (axes governed by an unrecognized config value: not evaluated, reported as-is).
-  The axes are `bom`, `eol`, `trailing` and `finalNewline` (the working copy) and `repoEol`: the
-  file is stored with CRLF in the git index (what the next commit will contain).
-- **`notAnalyzed`**: files that were **not analyzed**, with their `reason`
-  (`binary-extension`, `binary-content`, `gitattributes-notext`, `non-utf8`).
-
-[!--lang:es-->
-Este formato es **provisional**: hoy el output es la serialización directa del tipo
-`AuditResult`, pensada para parsear y testear fácil. Puede crecer si el valor lo justifica.
-
-<!--lang:en--]
-This format is **provisional**: today the output is the direct serialization of the
-`AuditResult` type, meant to be easy to parse and test. It may grow if the value justifies it.
+This format is **provisional**: today the JSON is the direct serialization of the
+`AuditResult` type (headed by the version and the kind of report), meant to be easy to parse
+and test. It may grow if the value justifies it.
 
 [!--lang:es-->
 ### `adapt-configs`: registra toda desviación como excepción
