@@ -16,6 +16,7 @@ Make peace in this app.
 [![downloads](https://img.shields.io/npm/dm/appease.svg)](https://npmjs.org/package/appease)
 [![linux](https://github.com/emilioplatzer/appease/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/emilioplatzer/appease/actions/workflows/build-and-test.yml)
 [![windows](https://ci.appveyor.com/api/projects/status/github/emilioplatzer/appease?svg=true)](https://ci.appveyor.com/project/emilioplatzer/appease)
+[![coverage](https://img.shields.io/coveralls/emilioplatzer/appease/master.svg)](https://coveralls.io/r/emilioplatzer/appease)
 [![qa-control](https://github.com/emilioplatzer/appease/actions/workflows/qa-control.yml/badge.svg)](https://github.com/emilioplatzer/appease/actions/workflows/qa-control.yml)
 
 <!--multilang buttons-->

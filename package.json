@@ -37,7 +37,7 @@
     "uuid": ">=14.0.0"
   },
   "dependencies": {
-    "commendatore": "^0.0.6",
+    "commendatore": "^0.1.0",
     "jsonc-parser": "^3.3.1",
     "picomatch": "^4.0.7"
   },
@@ -52,6 +52,7 @@
   },
   "qa-control": {
     "run-in": "server",
+    "coverage": 100,
     "type": "cmd-tool",
     "test-appveyor": true,
     "gha": true
