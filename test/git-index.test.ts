@@ -9,7 +9,7 @@ import { listIndexEol, renormalizeIndexEol } from "../src/io/files.js";
 import type { Confirmation } from "commendatore";
 
 function git(cwd: string, ...args: string[]): string {
-  return execFileSync("git", args, { cwd, encoding: "utf8" });
+  return execFileSync("git", args, { cwd, encoding: "utf8" }); // eslint-disable-line sonarjs/no-os-command-from-path -- the tests use the git of the PATH, like the user does
 }
 
 /** What the git index stores for `path` (the content the next commit will have). */
@@ -43,7 +43,7 @@ function answering(answers: Confirmation[]): { confirm: (path: string) => Promis
   const asked: string[] = [];
   return {
     asked,
-    confirm: async (path) => {
+    confirm: async (path) => { // eslint-disable-line @typescript-eslint/require-await -- implements the async confirmer interface
       asked.push(path);
       const answer = answers.shift();
       if (answer === undefined) throw new Error(`unexpected question for ${path}`);

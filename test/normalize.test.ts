@@ -26,6 +26,9 @@ describe("normalizeText", () => {
     it("trim removes end-of-line spaces and tabs (including at EOF)", () => {
       assert.equal(normalizeText("a  \nb\t\nc  ", opts({ trailing: "trim" })), "a\nb\nc");
     });
+    it("trim also removes the spaces before a lone CR", () => {
+      assert.equal(normalizeText("a  \rb \t\r\nc", opts({ trailing: "trim" })), "a\rb\r\nc");
+    });
     it("keep leaves trailing whitespace", () => {
       assert.equal(normalizeText("a  \n", opts({ trailing: "keep" })), "a  \n");
     });
@@ -46,6 +49,10 @@ describe("normalizeText", () => {
     });
     it("ensure with eol keep reuses the file's existing final ending", () => {
       assert.equal(normalizeText("a\nb\r\n\r\n", opts({ finalNewline: "ensure", eol: "keep" })), "a\nb\r\n");
+    });
+    it("ensure with eol keep reuses a final lone LF or CR", () => {
+      assert.equal(normalizeText("a\r\nb\n\n", opts({ finalNewline: "ensure", eol: "keep" })), "a\r\nb\n");
+      assert.equal(normalizeText("a\nb\r\r", opts({ finalNewline: "ensure", eol: "keep" })), "a\nb\r");
     });
     it("ensure with eol keep infers the ending from the content when none is trailing", () => {
       assert.equal(normalizeText("a\r\nb", opts({ finalNewline: "ensure", eol: "keep" })), "a\r\nb\r\n");

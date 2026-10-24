@@ -21,7 +21,7 @@ export function analyzeContent(content: string): FormatReport {
   const hasLf = lfCount - crlfCount > 0;
 
   // Horizontal whitespace right before a line break or at the end of the file.
-  const hasTrailingSpaces = /[ \t]+(?:\r?\n|$)/.test(content);
+  const hasTrailingSpaces = /[ \t](?:\r?\n|$)/.test(content); // one space is enough: no "+", that would backtrack
 
   const finalNewline = detectFinalNewline(content);
 

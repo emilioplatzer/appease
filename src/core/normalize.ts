@@ -1,4 +1,5 @@
 import type { NormalizeOptions } from "./types.js";
+import { trailingLineBreaksStart } from "./text.js";
 
 /** UTF-8 BOM code point. */
 const BOM = String.fromCharCode(0xfeff);
@@ -31,23 +32,35 @@ function applyEol(content: string, eol: NormalizeOptions["eol"]): string {
 
 /** Remove horizontal whitespace at the end of every line (and at end of file). */
 function trimTrailing(content: string): string {
-  return content.replace(/[ \t]+(?=\r|\n|$)/g, "");
+  return content.split(/(\r|\n)/).map((part, i) => (i % 2 === 0 ? trimEndSpaces(part) : part)).join("");
+}
+
+function trimEndSpaces(text: string): string {
+  let end = text.length;
+  while (end > 0 && (text[end - 1] === " " || text[end - 1] === "\t")) end--;
+  return text.slice(0, end);
 }
 
 /** Collapse the trailing newlines to exactly one (leaving a truly empty file empty). */
 function ensureFinalNewline(content: string, eol: NormalizeOptions["eol"]): string {
   if (content === "") return content;
-  const trailing = content.match(/(\r\n|\r|\n)+$/);
-  const body = trailing ? content.slice(0, content.length - trailing[0].length) : content;
+  const bodyEnd = trailingLineBreaksStart(content);
+  const body = content.slice(0, bodyEnd);
+  const hasTrailing = bodyEnd < content.length;
   const newline =
     eol === "crlf"
       ? "\r\n"
       : eol === "lf"
         ? "\n"
-        : trailing
-          ? trailing[1] // keep: reuse the file's existing final ending
+        : hasTrailing
+          ? finalLineBreak(content) // keep: reuse the file's existing final ending
           : (content.match(/\r\n|\r|\n/)?.[0] ?? "\n"); // keep with no trailing newline: infer
   return body + newline;
+}
+
+/** The last line break of a content that ends with one: CRLF when it ends with CR+LF, otherwise its last character (CR or LF). */
+function finalLineBreak(content: string): string {
+  return content.endsWith("\r\n") ? "\r\n" : content.slice(-1);
 }
 
 /** Add, remove or keep the leading UTF-8 BOM. */

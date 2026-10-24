@@ -58,12 +58,12 @@ async function writeConfig(cwd: string, name: string, content: string, dryRun: b
 }
 
 /** Write `.editorconfig` (created or updated only if it differs). */
-export function writeEditorconfig(cwd: string, content: string, dryRun: boolean): Promise<WriteResult> {
+export async function writeEditorconfig(cwd: string, content: string, dryRun: boolean): Promise<WriteResult> {
   return writeConfig(cwd, ".editorconfig", content, dryRun);
 }
 
 /** Write `.gitattributes` (created or updated only if it differs). */
-export function writeGitattributes(cwd: string, content: string, dryRun: boolean): Promise<WriteResult> {
+export async function writeGitattributes(cwd: string, content: string, dryRun: boolean): Promise<WriteResult> {
   return writeConfig(cwd, ".gitattributes", content, dryRun);
 }
 

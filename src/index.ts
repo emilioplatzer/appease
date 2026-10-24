@@ -51,7 +51,7 @@ function toNativeEol(content: string): string {
 }
 
 /** Parse JSON with comments (JSONC) and trailing commas safely. */
-export function parseJsonc(text: string): Record<string, any> {
+export function parseJsonc(text: string): Record<string, unknown> {
   if (!text.trim()) return {};
   const result = parse(text);
   if (result === undefined) {
@@ -61,7 +61,7 @@ export function parseJsonc(text: string): Record<string, any> {
 }
 
 /** Merge default settings into an existing JSONC string, preserving all comments and other formatting. */
-export function mergeVscodeSettingsJsonc(text: string, defaults: Record<string, any>): { content: string; changed: boolean } {
+export function mergeVscodeSettingsJsonc(text: string, defaults: Record<string, unknown>): { content: string; changed: boolean } {
   const parsed = parseJsonc(text);
   let content = text;
   let changed = false;

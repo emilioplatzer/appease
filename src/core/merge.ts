@@ -1,4 +1,5 @@
 import type { DeviationAxis, FormatReport } from "./types.js";
+import { trailingLineBreaksStart } from "./text.js";
 
 /** One audited file with findings, ready to turn into config exceptions. */
 export interface AuditedFile {
@@ -121,6 +122,6 @@ function detectEol(content: string): string {
 
 /** Append `addition` after the existing content, separated by a blank line, ending with one EOL. */
 function append(existing: string, addition: string, eol: string): string {
-  const base = existing.replace(/(?:\r\n|\r|\n)*$/, "");
+  const base = existing.slice(0, trailingLineBreaksStart(existing));
   return (base === "" ? "" : base + eol + eol) + addition + eol;
 }

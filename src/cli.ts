@@ -39,7 +39,7 @@ export function parseArgs(argv: string[]): { options: RunOptions | null; message
       ],
       argv,
     },
-    (base, argv, lang) => {
+    (base, argv, lang) => { // eslint-disable-line @typescript-eslint/promise-function-async -- cleye types cli() with commands as a possible promise, here it is synchronous
       const message = translator(i18n, lang);
       // `--dry-run` is only for the commands that write to disk (not for `audit`, which never writes).
       const dryRunFlag = { dryRun: { type: Boolean, description: message("dryRunHelp") } };
@@ -80,7 +80,7 @@ export function parseArgs(argv: string[]): { options: RunOptions | null; message
   return { options, message, json, version: identity.version };
 }
 
-export async function main(argv: string[]): Promise<number> {
+export async function main(argv: string[]): Promise<number> { // eslint-disable-line complexity
   const { options, message, json, version } = parseArgs(argv);
   if (options === null) return 1;
   let report;
@@ -104,5 +104,5 @@ export async function main(argv: string[]): Promise<number> {
 
 // Only run when invoked directly (not when imported by tests).
 if (import.meta.main) {
-  runMain(() => main(process.argv.slice(2)), 1);
+  runMain(async () => main(process.argv.slice(2)), 1);
 }

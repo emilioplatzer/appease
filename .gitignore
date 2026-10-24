@@ -147,3 +147,5 @@ test-run/
 
 *-local.*
 local-*
+
+.claude/

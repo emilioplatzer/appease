@@ -35,7 +35,7 @@ export function audit(
 }
 
 /** Axes where `report` differs from `cfg`, skipping axes the config could not resolve (case 2). */
-function fileDeviations(report: FormatReport, cfg: ResolvedFileConfig, nativeEol: "lf" | "crlf"): DeviationAxis[] {
+function fileDeviations(report: FormatReport, cfg: ResolvedFileConfig, nativeEol: "lf" | "crlf"): DeviationAxis[] { // eslint-disable-line complexity
   const deviations: DeviationAxis[] = [];
   const governs = (axis: DeviationAxis): boolean => !cfg.unresolved.includes(axis);
 

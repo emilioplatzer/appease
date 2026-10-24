@@ -64,7 +64,7 @@ export function defaultGitattributes(): string {
 }
 
 /** Pure, idempotent defaults for `.vscode/settings.json`. */
-export function defaultVscodeSettings(): Record<string, any> {
+export function defaultVscodeSettings(): Record<string, unknown> {
   return {
     "editor.renderWhitespace": "selection",
     "files.trimTrailingWhitespace": true,

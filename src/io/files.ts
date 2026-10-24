@@ -47,9 +47,9 @@ export async function listIndexEol(cwd: string): Promise<Map<string, IndexEol>> 
 }
 
 /** Run git with `input` as its standard input; resolves with its standard output. */
-function gitWithInput(cwd: string, args: string[], input: Buffer): Promise<string> {
+async function gitWithInput(cwd: string, args: string[], input: Buffer): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn("git", args, { cwd, stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn("git", args, { cwd, stdio: ["pipe", "pipe", "pipe"] }); // eslint-disable-line sonarjs/no-os-command-from-path -- a command line tool uses the git of the PATH, like the user does
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
