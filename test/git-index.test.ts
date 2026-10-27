@@ -52,7 +52,9 @@ function answering(answers: Confirmation[]): { confirm: (path: string) => Promis
   };
 }
 
-describe("EOL stored in the git index", () => {
+describe("EOL stored in the git index", function () {
+  // AppVeyor's Windows machines spawn git slowly: the 8 git calls of the beforeEach exceed mocha's default 2000ms
+  if (process.env.APPVEYOR) this.timeout(10_000);
   let cwd: string;
   beforeEach(async () => {
     cwd = await repoWithOldCrlf();
